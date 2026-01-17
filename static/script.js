@@ -22,6 +22,9 @@ const GOOGLE_DRIVE_BASE_URL = 'https://drive.google.com/uc?export=download&id=';
 // Использовать Google Drive или локальные файлы (переключите на false для локальных файлов)
 const USE_GOOGLE_DRIVE = true;
 
+// Включить/выключить видео (false = видео отключены, показываются вручную на проекторе)
+const ENABLE_VIDEOS = false;
+
 // Состояние игры
 let gameState = {
     currentScreen: 'start', // start, video, intro-complete, game, final-results
@@ -854,9 +857,14 @@ function setupGameFlow() {
     const startBtn = document.getElementById('start-game-btn');
     if (startBtn) {
         startBtn.addEventListener('click', () => {
-            playVideo('Введение.mp4', () => {
+            if (ENABLE_VIDEOS) {
+                playVideo('Введение.mp4', () => {
+                    showScreen('intro-complete');
+                });
+            } else {
+                // Видео отключены - сразу переходим к следующему экрану
                 showScreen('intro-complete');
-            });
+            }
         });
     }
 
@@ -1023,13 +1031,20 @@ async function startRound(roundNumber) {
         console.warn('Ошибка обновления раунда на сервере (продолжаем локально):', error);
     }
     
-    // Показываем видео раунда
-    playVideo(`Раунд ${gameState.currentRound}.mp4`, () => {
-        // После видео показываем основной экран
+    // Показываем видео раунда (или пропускаем, если видео отключены)
+    if (ENABLE_VIDEOS) {
+        playVideo(`Раунд ${gameState.currentRound}.mp4`, () => {
+            // После видео показываем основной экран
+            showScreen('game');
+            connectWebSocket();
+            updateRoundControls(gameState.currentRound);
+        });
+    } else {
+        // Видео отключены - сразу переходим к игровому экрану
         showScreen('game');
         connectWebSocket();
         updateRoundControls(gameState.currentRound);
-    });
+    }
 }
 
 function updateRoundControls(roundNumber) {
