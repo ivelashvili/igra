@@ -675,6 +675,37 @@ async def next_round():
         "events": result.get("events")
     }
 
+@app.post("/api/game/new-game")
+async def create_new_game():
+    """Создать новую игру (очистить старую)"""
+    global game_instance
+    
+    try:
+        # Деактивируем старую игру, если есть
+        with database.get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("UPDATE games SET status = 'completed' WHERE status = 'active'")
+            conn.commit()
+        
+        # Создаем новую игру
+        new_game = Game(num_players=30)
+        game_instance = new_game
+        game_instance.save_to_database()
+        
+        # Отправляем обновление всем WebSocket клиентам
+        await broadcast_update()
+        
+        return {
+            "success": True,
+            "message": "Новая игра создана",
+            "current_round": game_instance.current_round
+        }
+    except Exception as e:
+        print(f"Ошибка создания новой игры: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Ошибка создания новой игры: {str(e)}")
+
 @app.get("/api/game/snapshots")
 async def get_available_snapshots():
     """Получить список доступных снимков"""

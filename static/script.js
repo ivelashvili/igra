@@ -868,6 +868,36 @@ function setupGameFlow() {
         });
     }
 
+    // Кнопка "Новая игра"
+    const newGameBtn = document.getElementById('new-game-btn');
+    if (newGameBtn) {
+        newGameBtn.addEventListener('click', async () => {
+            if (confirm('Вы уверены, что хотите создать новую игру? Все текущие данные будут удалены.')) {
+                try {
+                    const response = await fetch('/api/game/new-game', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        alert('Новая игра создана!');
+                        // Перезагружаем страницу для обновления данных
+                        location.reload();
+                    } else {
+                        const error = await response.json();
+                        alert('Ошибка создания новой игры: ' + error.detail);
+                    }
+                } catch (error) {
+                    console.error('Ошибка создания новой игры:', error);
+                    alert('Ошибка создания новой игры');
+                }
+            }
+        });
+    }
+
     // Кнопка "Начать первый раунд"
     const startRound1Btn = document.getElementById('start-round-1-btn');
     if (startRound1Btn) {
