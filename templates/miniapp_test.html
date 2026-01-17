@@ -3,11 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Королевская Биржа</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <title>Королевская Биржа - Тест</title>
     <link rel="stylesheet" href="/static/miniapp.css">
+    <style>
+        /* Стили для тестовой панели */
+        .test-panel {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            z-index: 10000;
+            font-size: 12px;
+            max-width: 250px;
+            font-family: monospace;
+        }
+        .test-panel h3 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            color: #d4af37;
+        }
+        .test-btn {
+            background: #8b4513;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            margin: 3px 0;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            width: 100%;
+        }
+        .test-btn:hover {
+            background: #a0522d;
+        }
+        .test-info {
+            margin: 5px 0;
+            font-size: 10px;
+            color: #ccc;
+        }
+    </style>
 </head>
 <body>
+    <!-- Тестовая панель -->
+    <div class="test-panel">
+        <h3>🧪 Тестовый режим</h3>
+        <div class="test-info">ID: <span id="test-user-id">tg_12345</span></div>
+        <div class="test-info">Имя: <span id="test-user-name">Тестовый Игрок</span></div>
+        <button class="test-btn" onclick="testChangeUser()">Сменить пользователя</button>
+        <button class="test-btn" onclick="testCreateAllPlayers()">Создать всех игроков</button>
+        <button class="test-btn" onclick="testShowCharacterSelection()">Выбор персонажа</button>
+        <button class="test-btn" onclick="testResetGame()">Сбросить игру</button>
+        <button class="test-btn" onclick="testAddMoney()">+1000 монет</button>
+        <button class="test-btn" onclick="testAddResources()">+10 всех ресурсов</button>
+        <button class="test-btn" onclick="testNextRound()">Следующий раунд</button>
+        <div class="test-info" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #555;">
+            <strong>Статус:</strong><br>
+            <span id="test-status">Готов к тестированию</span>
+        </div>
+    </div>
+
     <!-- Character Selection Screen -->
     <div id="character-selection-screen" class="character-selection-screen">
         <div class="character-selection-content">
@@ -398,23 +455,16 @@
                             <span class="market-building-stat-value market-building-cost-coins-value" id="market-building-cost-coins">0</span>
                         </div>
                         
-                        <div class="market-building-stat-item market-building-base-resource-item">
-                            <div class="market-building-cost-resources-label">Приносит ресурса:</div>
-                            <ul class="market-building-cost-resources-list" id="market-building-base-resource-list">
+                        <div class="market-building-stat-item market-building-income-item">
+                            <div class="market-building-income-label">Приносит ресурса:</div>
+                            <div class="market-building-income-content" id="market-building-income">
                                 <!-- Заполняется через JS -->
-                            </ul>
+                            </div>
                         </div>
                         
                         <div class="market-building-stat-item">
                             <span class="market-building-stat-label">У вас есть:</span>
                             <span class="market-building-stat-value" id="market-building-player-count">0</span>
-                        </div>
-                        
-                        <div class="market-building-stat-item market-building-income-item">
-                            <div class="market-building-income-label">Доход за раунд:</div>
-                            <div class="market-building-income-content" id="market-building-income">
-                                <!-- Заполняется через JS -->
-                            </div>
                         </div>
                     </div>
                     
@@ -505,6 +555,43 @@
         </button>
     </nav>
 
+    <!-- Modals -->
+    <!-- Buy Resource Modal -->
+    <div id="buy-resource-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('buy-resource-modal')">&times;</span>
+            <h3>Купить ресурс</h3>
+            <div id="buy-resource-options"></div>
+        </div>
+    </div>
+
+    <!-- Sell Resource Modal -->
+    <div id="sell-resource-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('sell-resource-modal')">&times;</span>
+            <h3>Продать ресурс</h3>
+            <div id="sell-resource-options"></div>
+        </div>
+    </div>
+
+    <!-- Build Modal -->
+    <div id="build-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('build-modal')">&times;</span>
+            <h3>Построить объект</h3>
+            <div id="build-options"></div>
+        </div>
+    </div>
+
+    <!-- Sell Building Modal -->
+    <div id="sell-building-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('sell-building-modal')">&times;</span>
+            <h3>Продать объект</h3>
+            <div id="sell-building-options"></div>
+        </div>
+    </div>
+
     <!-- Loading Overlay -->
     <div id="loading-overlay" class="loading-overlay">
         <div class="spinner"></div>
@@ -512,6 +599,172 @@
 
     <!-- Toast Notifications -->
     <div id="toast" class="toast"></div>
+
+    <!-- Имитация Telegram WebApp API -->
+    <script>
+        // Получаем номер игрока из URL параметра
+        const urlParams = new URLSearchParams(window.location.search);
+        const playerNumber = urlParams.get('player') || '1';
+        const playerNumberInt = parseInt(playerNumber);
+        
+        // 10 предопределенных игроков
+        const testPlayers = [
+            { id: 10001, name: 'Игрок 1' },
+            { id: 10002, name: 'Игрок 2' },
+            { id: 10003, name: 'Игрок 3' },
+            { id: 10004, name: 'Игрок 4' },
+            { id: 10005, name: 'Игрок 5' },
+            { id: 10006, name: 'Игрок 6' },
+            { id: 10007, name: 'Игрок 7' },
+            { id: 10008, name: 'Игрок 8' },
+            { id: 10009, name: 'Игрок 9' },
+            { id: 10010, name: 'Игрок 10' }
+        ];
+        
+        const currentPlayer = testPlayers[playerNumberInt - 1] || testPlayers[0];
+        
+        // Формируем initData с user ID для передачи на сервер
+        const userData = {
+            id: currentPlayer.id,
+            first_name: currentPlayer.name,
+            last_name: '',
+            username: `player_${currentPlayer.id}`,
+            language_code: 'ru',
+            photo_url: 'https://via.placeholder.com/200'
+        };
+        const initDataString = `user=${encodeURIComponent(JSON.stringify(userData))}`;
+        
+        // Имитация Telegram WebApp API для тестирования
+        window.Telegram = {
+            WebApp: {
+                initData: initDataString,
+                initDataUnsafe: {
+                    user: userData
+                },
+                ready: function() { console.log(`Telegram WebApp ready (test mode) - ${currentPlayer.name}`); },
+                expand: function() { console.log('Telegram WebApp expanded (test mode)'); },
+                showAlert: function(message) { alert(message); },
+                showConfirm: function(message, callback) { 
+                    if (confirm(message)) callback(true);
+                    else callback(false);
+                }
+            }
+        };
+
+        // Тестовые функции
+        let testUserId = currentPlayer.id;
+        let testUserName = currentPlayer.name;
+
+        function testChangeUser() {
+            // Показываем список игроков для выбора
+            const playerList = testPlayers.map((p, idx) => `${idx + 1}. ${p.name}`).join('\n');
+            const choice = prompt(`Выберите игрока (1-10):\n${playerList}`);
+            const selectedNum = parseInt(choice);
+            if (selectedNum >= 1 && selectedNum <= 10) {
+                window.location.href = `?player=${selectedNum}`;
+            }
+        }
+
+        function testShowCharacterSelection() {
+            if (window.showCharacterSelection) {
+                window.showCharacterSelection();
+                document.getElementById('test-status').textContent = 'Открыта страница выбора персонажа';
+            } else {
+                document.getElementById('test-status').textContent = 'Функция не найдена';
+            }
+        }
+
+        async function testResetGame() {
+            if (confirm('Сбросить игру? Это перезагрузит страницу.')) {
+                document.getElementById('test-status').textContent = 'Сброс игры...';
+                await fetch('/api/miniapp/test/reset', { method: 'POST' });
+                location.reload();
+            }
+        }
+
+        async function testAddMoney() {
+            try {
+                const response = await fetch('/api/miniapp/test/add-money', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Telegram-Init-Data': initDataString
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    document.getElementById('test-status').textContent = 'Добавлено 1000 монет';
+                    if (window.loadPlayerState) await window.loadPlayerState();
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+            }
+        }
+
+        async function testAddResources() {
+            try {
+                const response = await fetch('/api/miniapp/test/add-resources', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Telegram-Init-Data': initDataString
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    document.getElementById('test-status').textContent = 'Добавлено 10 всех ресурсов';
+                    if (window.loadPlayerState) await window.loadPlayerState();
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+            }
+        }
+
+        async function testNextRound() {
+            try {
+                const response = await fetch('/api/miniapp/test/next-round', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Telegram-Init-Data': initDataString
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    document.getElementById('test-status').textContent = 'Раунд ' + data.round;
+                    if (window.loadPlayerState) await window.loadPlayerState();
+                    if (window.loadPrices) await window.loadPrices();
+                    if (window.loadRoundInfo) await window.loadRoundInfo();
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+            }
+        }
+
+        async function testCreateAllPlayers() {
+            try {
+                const response = await fetch('/api/miniapp/test/create-players', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                if (data.success) {
+                    document.getElementById('test-status').textContent = `Создано игроков: ${data.total}`;
+                    // Перезагружаем состояние текущего игрока
+                    if (window.loadPlayerState) await window.loadPlayerState();
+                } else {
+                    document.getElementById('test-status').textContent = 'Ошибка создания игроков';
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                document.getElementById('test-status').textContent = 'Ошибка создания игроков';
+            }
+        }
+
+        // Обновляем отображение тестовой информации
+        document.getElementById('test-user-id').textContent = 'tg_' + testUserId;
+        document.getElementById('test-user-name').textContent = testUserName;
+        document.title = `${testUserName} - Королевская Биржа`;
+    </script>
 
     <script src="/static/miniapp.js"></script>
 </body>

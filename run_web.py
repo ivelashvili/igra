@@ -3,13 +3,15 @@
 """
 import os
 import uvicorn
-from web_server import app, set_game
-from game_engine import Game
+from web_server import app
+import database
 
 if __name__ == "__main__":
-    # Создаем игру (можно будет загружать из БД)
-    game = Game(num_players=30)
-    set_game(game)
+    # Инициализируем БД (если еще не инициализирована)
+    database.init_database()
+    
+    # Игра будет загружена автоматически при старте сервера (в startup event)
+    # или создана при первом запросе
     
     # Запускаем сервер
     # Railway передает порт через переменную окружения PORT

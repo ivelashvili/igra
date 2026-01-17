@@ -67,5 +67,5 @@ BUILDING_CONSTRUCTION_TIME = {
 }
 
 # Начальный капитал игрока
-STARTING_MONEY = 1000
+STARTING_MONEY = 2500
 

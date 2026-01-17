@@ -12,3 +12,7 @@ web_versions/
 .env
 *.log
 
+
+# Видео файлы (слишком большие для Git)
+static/videos/*.mp4
+готовые видосы/

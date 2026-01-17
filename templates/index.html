@@ -7,22 +7,222 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <div class="header-content">
-                <div class="logo-container">
-                    <img src="/static/images/logo.png" alt="Логотип Королевской биржи" class="logo">
-                </div>
-                <div class="header-text">
-                    <h1>Королевская Биржа</h1>
-                    <h2>Бургундия. Тогучин</h2>
-                    <div class="round-info">
-                        <span>Раунд: <strong id="current-round">1</strong></span>
-                        <span>Игроков: <strong id="num-players">0</strong></span>
+    <!-- Начальный экран -->
+    <div id="start-screen" class="screen">
+        <div class="start-screen-content">
+            <img src="/static/images/logo.png" alt="Логотип" class="start-logo">
+            <h1>Королевская Биржа</h1>
+            <button id="start-game-btn" class="start-button">Начать игру</button>
+        </div>
+    </div>
+
+    <!-- Экран видео -->
+    <div id="video-screen" class="screen" style="display: none;">
+        <video id="game-video" class="game-video" controls autoplay>
+            Ваш браузер не поддерживает видео.
+        </video>
+    </div>
+
+    <!-- Промежуточный экран (после введения) -->
+    <div id="intro-complete-screen" class="screen" style="display: none;">
+        <div class="intro-complete-content">
+            <h2>Готовы начать?</h2>
+            <div class="intro-buttons">
+                <button id="start-round-1-btn" class="round-button">Начать первый раунд</button>
+                <button id="rules-btn" class="rules-button">Правила игры</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Экран с правилами игры -->
+    <div id="rules-screen" class="screen" style="display: none;">
+        <div class="rules-container">
+            <button class="rules-back-btn" onclick="goBackFromRules()">← Назад</button>
+            <h1>📜 Правила игры</h1>
+            
+            <div class="rules-content">
+                <section class="rules-section">
+                    <h2>🎯 Цель игры</h2>
+                    <p>Заработать больше всех. Ваш заработок = ваша капитализация. Это деньги + стоимость всех ресурсов + стоимость всех объектов.</p>
+                </section>
+
+                <section class="rules-section">
+                    <h2>💰 Начало игры</h2>
+                    <ul>
+                        <li>У каждого игрока <strong>2500 монет</strong> в начале игры</li>
+                        <li>В первом раунде нет событий - это время для первых покупок и строительства</li>
+                    </ul>
+                </section>
+
+                <section class="rules-section">
+                    <h2>⚡ Что можно делать в каждом раунде</h2>
+                    
+                    <div class="rules-action">
+                        <h3>1. Покупать ресурсы</h3>
+                        <ul>
+                            <li>Покупайте ресурсы на бирже по текущим ценам</li>
+                            <li>Цены меняются каждый раунд в зависимости от спроса, предложения и событий</li>
+                            <li>Ресурсы можно использовать сразу после покупки</li>
+                        </ul>
+                    </div>
+
+                    <div class="rules-action">
+                        <h3>2. Продавать ресурсы</h3>
+                        <ul>
+                            <li>Продавайте ресурсы на бирже по текущим ценам</li>
+                            <li>Получайте монеты сразу после продажи</li>
+                        </ul>
+                    </div>
+
+                    <div class="rules-action">
+                        <h3>3. Строить объекты</h3>
+                        <ul>
+                            <li>Используйте ресурсы для строительства объектов</li>
+                            <li>Каждый объект требует определенные ресурсы</li>
+                            <li>Объект строится <strong>1 раунд</strong>, затем становится активным и приносит доход</li>
+                        </ul>
+                    </div>
+
+                    <div class="rules-action">
+                        <h3>4. Продавать объекты</h3>
+                        <ul>
+                            <li>Выставьте объект на продажу - он будет продан в следующем раунде</li>
+                            <li>Получите монеты, равные стоимости ресурсов, потраченных на строительство</li>
+                            <li>Объект перестает приносить доход сразу после выставления на продажу</li>
+                        </ul>
+                    </div>
+                </section>
+
+                <section class="rules-section">
+                    <h2>🏗️ Как работают объекты</h2>
+                    
+                    <div class="rules-action">
+                        <h3>Строительство</h3>
+                        <ul>
+                            <li><strong>Раунд N</strong>: Вы начинаете строительство → объект имеет статус "строится"</li>
+                            <li><strong>Раунд N+1</strong>: Объект завершен → статус "построен"</li>
+                            <li><strong>Раунд N+2</strong>: Объект активен → начинает приносить доход</li>
+                        </ul>
+                    </div>
+
+                    <div class="rules-action">
+                        <h3>Доход от объектов</h3>
+                        <ul>
+                            <li>Активные объекты приносят доход каждый раунд</li>
+                            <li>Доход может быть в виде <strong>ресурсов</strong> или <strong>монет</strong></li>
+                            <li>Чем больше одинаковых объектов в игре, тем меньше доход от каждого (насыщение рынка)</li>
+                            <li>События могут увеличивать или уменьшать доходы</li>
+                        </ul>
+                    </div>
+
+                    <div class="rules-example">
+                        <h4>Пример:</h4>
+                        <ul>
+                            <li>Раунд 1: Начали строительство Лесоповала</li>
+                            <li>Раунд 2: Лесоповал построен</li>
+                            <li>Раунд 3: Лесоповал активен, приносит 3 единицы дерева</li>
+                        </ul>
+                    </div>
+                </section>
+
+                <section class="rules-section">
+                    <h2>🎲 События</h2>
+                    <ul>
+                        <li>События влияют на:
+                            <ul>
+                                <li><strong>Цены на ресурсы</strong> (могут вырасти или упасть)</li>
+                                <li><strong>Доходы от объектов</strong> (могут увеличиться или уменьшиться)</li>
+                            </ul>
+                        </li>
+                        <li>События применяются в начале раунда, до начисления доходов</li>
+                    </ul>
+                </section>
+
+                <section class="rules-section">
+                    <h2>📈 Динамика рынка</h2>
+                    <p>Цены на ресурсы меняются в зависимости от:</p>
+                    <ol>
+                        <li><strong>Спрос</strong> - чем больше игроков покупает ресурс, тем дороже он становится</li>
+                        <li><strong>Предложение</strong> - чем больше игроков продает ресурс, тем дешевле он становится</li>
+                        <li><strong>События</strong> - могут резко изменить цены</li>
+                    </ol>
+                </section>
+
+                <section class="rules-section">
+                    <h2>📦 Ресурсы</h2>
+                    <p>В игре 9 ресурсов:</p>
+                    <div class="resources-list">
+                        Камень, Дерево, Железо, Скот, Овощи, Рабы, Золото, Зерно, Рыба
+                    </div>
+                </section>
+
+                <section class="rules-section">
+                    <h2>🏰 Объекты</h2>
+                    <p>11 типов объектов, каждый приносит доход:</p>
+                    <ul>
+                        <li><strong>Лесоповал</strong> - приносит дерево</li>
+                        <li><strong>Каменоломня</strong> - приносит камень</li>
+                        <li><strong>Рыболовня</strong> - приносит рыбу</li>
+                        <li><strong>Теплицы</strong> - приносят овощи</li>
+                        <li><strong>Ферма</strong> - приносит скот</li>
+                        <li><strong>Посевные поля</strong> - приносят зерно</li>
+                        <li><strong>Кузнечная</strong> - приносит железо</li>
+                        <li><strong>Золотой рудник</strong> - приносит золото</li>
+                        <li><strong>Постоялый двор</strong> - приносит монеты</li>
+                        <li><strong>Трактир</strong> - приносит монеты</li>
+                        <li><strong>Куртизанские палатки</strong> - приносит монеты</li>
+                    </ul>
+                </section>
+
+                <section class="rules-section">
+                    <h2>⚠️ Важные моменты</h2>
+                    <ul>
+                        <li>⚠️ Объект перестает приносить доход сразу после выставления на продажу</li>
+                        <li>⚠️ Объект продается только в следующем раунде после выставления</li>
+                        <li>✅ Ресурсы можно использовать сразу после покупки</li>
+                        <li>✅ Доход от объектов можно использовать сразу после начисления</li>
+                        <li>📊 Следите за ценами - они меняются каждый раунд</li>
+                        <li>🎯 Стратегия важна - планируйте строительство заранее</li>
+                    </ul>
+                </section>
+
+                <section class="rules-section">
+                    <h2>🏆 Победа</h2>
+                    <p>Победитель определяется по <strong>капитализации</strong> в конце 10 раунда:</p>
+                    <p class="rules-formula">Капитализация = Деньги + Стоимость всех ресурсов + Стоимость всех объектов</p>
+                </section>
+            </div>
+
+            <div class="rules-footer">
+                <p class="rules-wish">Удачи на Королевской бирже! 🎉</p>
+                <button class="rules-close-btn" onclick="goBackFromRules()">Понятно, начать игру</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Основной экран игры -->
+    <div id="game-screen" class="screen" style="display: none;">
+        <div class="container">
+            <header>
+                <div class="header-content">
+                    <div class="logo-container">
+                        <img src="/static/images/logo.png" alt="Логотип Королевской биржи" class="logo">
+                    </div>
+                    <div class="header-text">
+                        <h1>Королевская Биржа</h1>
+                        <h2>Бургундия. Тогучин</h2>
+                        <div class="round-info">
+                            <span>Раунд: <strong id="current-round">1</strong></span>
+                            <span>Игроков: <strong id="num-players">0</strong></span>
+                        </div>
+                    </div>
+                    <!-- Кнопка управления раундом -->
+                    <div class="round-control">
+                        <button id="next-round-btn" class="next-round-button" style="display: none;">Следующий раунд</button>
+                        <button id="final-results-btn" class="final-results-button" style="display: none;">Подвести итоги</button>
                     </div>
                 </div>
-            </div>
-        </header>
+            </header>
 
         <main>
             <!-- Цены на ресурсы -->
@@ -61,7 +261,8 @@
                                 <th>Место</th>
                                 <th>Игрок</th>
                                 <th>Капитализация</th>
-                                <th>Прирост</th>
+                                <th>За раунд</th>
+                                <th>За игру</th>
                             </tr>
                         </thead>
                         <tbody id="leaderboard-body">
@@ -140,6 +341,14 @@
                             <span id="modal-building-percentage" class="modal-stat-value"></span>
                         </div>
                     </div>
+                    <div class="modal-building-cost" id="modal-building-cost">
+                        <div class="modal-stat-label">Стоимость в ресурсах:</div>
+                        <ul id="modal-building-cost-list" class="modal-building-cost-list"></ul>
+                    </div>
+                    <div class="modal-building-income" id="modal-building-income">
+                        <div class="modal-stat-label">Приносит:</div>
+                        <div id="modal-building-income-value" class="modal-building-income-value"></div>
+                    </div>
                 </div>
                 <div class="modal-right">
                     <h3 class="modal-owners-title">Владельцы</h3>
@@ -147,6 +356,61 @@
                         <!-- Список владельцев будет добавлен через JavaScript -->
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно со сводкой по раунду -->
+    <div id="round-summary-modal" class="round-summary-modal" style="display: none;">
+        <div class="round-summary-content">
+            <button class="round-summary-close" onclick="closeRoundSummary()">×</button>
+            <h2 id="round-summary-title" class="round-summary-title"></h2>
+            
+            <!-- Описания событий -->
+            <div id="round-summary-events" class="round-summary-events">
+                <!-- Заполняется через JavaScript -->
+            </div>
+            
+            <!-- Изменения цен на ресурсы -->
+            <div id="round-summary-resources" class="round-summary-section">
+                <h3>Изменения цен на ключевые ресурсы</h3>
+                <div id="round-summary-resources-list" class="round-summary-list">
+                    <!-- Заполняется через JavaScript -->
+                </div>
+            </div>
+            
+            <!-- Изменения доходов объектов -->
+            <div id="round-summary-buildings" class="round-summary-section">
+                <h3>Изменения доходов объектов</h3>
+                <div id="round-summary-buildings-list" class="round-summary-list">
+                    <!-- Заполняется через JavaScript -->
+                </div>
+            </div>
+            
+            <button class="round-summary-continue" onclick="closeRoundSummary()">Продолжить</button>
+        </div>
+    </div>
+
+    <!-- Финальный экран с рейтингом -->
+    <div id="final-results-screen" class="screen" style="display: none;">
+        <div class="final-results-container">
+            <h1>🏆 Итоги игры</h1>
+            
+            <div class="table-container">
+                <table id="final-leaderboard-table">
+                    <thead>
+                        <tr>
+                            <th>Место</th>
+                            <th>Игрок</th>
+                            <th>Капитализация</th>
+                            <th>За раунд</th>
+                            <th>За игру</th>
+                        </tr>
+                    </thead>
+                    <tbody id="final-leaderboard-body">
+                        <!-- Заполняется через JavaScript -->
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
