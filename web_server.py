@@ -1803,6 +1803,9 @@ async def favicon():
 
 # Подключаем статические файлы
 # ВАЖНО: более специфичный путь должен быть ПЕРВЫМ, иначе /static перехватит все запросы
+# Создаем директорию для видео, если её нет (видео загружаются отдельно)
+import os
+os.makedirs("static/videos", exist_ok=True)
 app.mount("/static/videos", StaticFiles(directory="static/videos"), name="videos")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
