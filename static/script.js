@@ -1,6 +1,27 @@
 let ws = null;
 let reconnectInterval = null;
 
+// Конфигурация видео: маппинг имен файлов на Google Drive ID
+const VIDEO_DRIVE_IDS = {
+    'Введение.mp4': '1oSjU7z2bvUYi_3DndA4bbkL-egA3ec-j',
+    'Раунд 1.mp4': '1Y0QT2dEi1KJ4I2cbEpKEwwx1xA2uh2Xf',
+    'Раунд 2.mp4': '1L5PgVV4IRXMWigI2XSqOObvlkwJXAR1a',
+    'Раунд 3.mp4': '13nFuuIHy8OnYiEn7CbNgZgU1B1RVbTT7',
+    'Раунд 4.mp4': '1qy_utFmxrSuLS74MCDkg5RxV7PNnYSaY',
+    'Раунд 5.mp4': '1fTmqWYTIjlLIaX0kJuV-F1MicNqSDex1',
+    'Раунд 6.mp4': '1HHpHmBAjoNJ94iQFh3GbfdRh0Ww4M28_',
+    'Раунд 7.mp4': '1wQIRLkvdbiueFjbUWXV5-Ducj4oNUQKK',
+    'Раунд 8.mp4': '1g0ZQUYQCszbqND7iLafCW3F-OL8PoaxZ',
+    'Раунд 9.mp4': '10sPpLb236yyvmqmHmAdCEA3ANC7tTSjO',
+    'Раунд 10.mp4': '1YW2vlJCSw00oHGmCF5F_VdWJO8iuq8v5'
+};
+
+// Базовый URL для Google Drive (прямая загрузка)
+const GOOGLE_DRIVE_BASE_URL = 'https://drive.google.com/uc?export=download&id=';
+
+// Использовать Google Drive или локальные файлы (переключите на false для локальных файлов)
+const USE_GOOGLE_DRIVE = true;
+
 // Состояние игры
 let gameState = {
     currentScreen: 'start', // start, video, intro-complete, game, final-results
@@ -909,11 +930,26 @@ function playVideo(filename, onComplete) {
     gameState.isVideoPlaying = true;
     gameState.currentScreen = 'video';
     
-    // Кодируем только имя файла для правильной обработки кириллицы
-    const encodedFilename = encodeURIComponent(filename);
-    const videoPath = `/static/videos/${encodedFilename}`;
+    // Определяем путь к видео: Google Drive или локальный
+    let videoPath;
+    if (USE_GOOGLE_DRIVE && VIDEO_DRIVE_IDS[filename]) {
+        // Используем Google Drive
+        const fileId = VIDEO_DRIVE_IDS[filename];
+        if (fileId === 'YOUR_FILE_ID') {
+            console.error('Ошибка: не указан Google Drive ID для файла:', filename);
+            console.error('Пожалуйста, замените YOUR_FILE_ID на реальный ID файла в конфигурации VIDEO_DRIVE_IDS');
+            // Fallback на локальный путь
+            const encodedFilename = encodeURIComponent(filename);
+            videoPath = `/static/videos/${encodedFilename}`;
+        } else {
+            videoPath = `${GOOGLE_DRIVE_BASE_URL}${fileId}`;
+        }
+    } else {
+        // Используем локальный путь
+        const encodedFilename = encodeURIComponent(filename);
+        videoPath = `/static/videos/${encodedFilename}`;
+    }
     
-    console.log('Закодированное имя:', encodedFilename); // Логирование
     console.log('Полный путь к видео:', videoPath); // Логирование
     
     video.src = videoPath;
