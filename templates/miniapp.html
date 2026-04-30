@@ -8,8 +8,39 @@
     <link rel="stylesheet" href="/static/miniapp.css">
 </head>
 <body>
+    <!-- Game Code Input Screen -->
+    <div id="game-code-screen" class="game-code-screen" style="display: none;">
+        <div class="game-code-content">
+            <div class="game-code-header">
+                <img src="/static/images/logo.png" alt="Логотип" class="game-code-logo">
+                <h2>Королевская Биржа</h2>
+            </div>
+            <div class="game-code-form">
+                <p class="game-code-description">Введите код игры (6 цифр)</p>
+                <div class="game-code-input-container">
+                    <input 
+                        type="text" 
+                        id="game-code-input" 
+                        class="game-code-input" 
+                        placeholder="000000"
+                        maxlength="6"
+                        inputmode="numeric"
+                        pattern="[0-9]{6}"
+                    >
+                </div>
+                <div id="game-code-error" class="game-code-error" style="display: none;"></div>
+                <button id="game-code-submit" class="game-code-submit" onclick="submitGameCode()">
+                    Войти в игру
+                </button>
+                <button id="game-code-change" class="game-code-change" onclick="showGameCodeScreen()" style="display: none;">
+                    Сменить игру
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Character Selection Screen -->
-    <div id="character-selection-screen" class="character-selection-screen">
+    <div id="character-selection-screen" class="character-selection-screen" style="display: none;">
         <div class="character-selection-content">
             <h2>Выберите персонажа</h2>
             <p class="character-selection-description">Выберите одного из персонажей для игры</p>
@@ -17,6 +48,10 @@
             <div class="character-selection-grid" id="character-selection-grid">
                 <!-- Заполняется через JS -->
             </div>
+            
+            <button type="button" class="character-selection-change-game-btn" onclick="clearGameCode(); showGameCodeScreen();">
+                Сменить игру
+            </button>
             
             <!-- Confirmation Modal -->
             <div id="character-confirm-modal" class="character-confirm-modal" style="display: none;">
@@ -36,66 +71,72 @@
     </div>
 
     <div class="container" id="main-container" style="display: none;">
-        <!-- Header -->
-        <header class="header">
+        <!-- Header Card (Королевская биржа + Раунд) -->
+        <header class="header portfolio-header-card">
             <div class="header-content">
                 <div class="logo-container">
-                    <img src="/static/images/logo.png" alt="Логотип" class="logo">
+                    <img src="/static/images/logo.png" alt="Логотип" class="logo header-crest">
                 </div>
                 <div class="header-text">
-                    <h1>Королевская Биржа</h1>
+                    <h1>Королевская биржа</h1>
+                    <div class="round-info round-in-header">
+                        <span>Раунд: <span id="current-round">1</span></span>
+                    </div>
                 </div>
             </div>
         </header>
 
-        <!-- Player Profile Block -->
-        <div class="player-profile-block">
-            <div class="player-avatar-section">
-                <img id="player-avatar" src="" alt="Аватар" class="player-avatar" style="display: none;">
-                <div id="player-avatar-placeholder" class="player-avatar-placeholder">👤</div>
+        <!-- Character Card (Фото + Имя + капитализация) -->
+        <div class="player-profile-block portfolio-character-card">
+            <div class="player-avatar-section" id="player-avatar-click-area" role="button" tabindex="0" title="Открыть аватар">
+                <img id="player-avatar" src="" alt="Фото" class="player-avatar" style="display: none;">
+                <div id="player-avatar-placeholder" class="player-avatar-placeholder">Фото</div>
             </div>
             <div class="player-profile-info">
                 <div class="player-name" id="player-name">Загрузка...</div>
-                <div class="round-info">
-                    <span>Раунд: <strong id="current-round">1</strong></span>
+                <div class="capitalization-label-inline">Капитализация:</div>
+                <div class="capitalization-main">
+                    <span class="capitalization-value" id="capitalization-value">0</span>
+                    <span class="capitalization-label">монет</span>
                 </div>
             </div>
         </div>
 
         <!-- Portfolio Screen (Main) -->
         <div id="portfolio-screen" class="screen active">
-            <!-- Capitalization Block -->
-            <section class="section balance-section">
-                <h2>Капитализация</h2>
-                <div class="capitalization-container">
-                    <div class="capitalization-left">
-                        <div class="capitalization-main">
-                            <span class="capitalization-value" id="capitalization-value">0</span>
-                            <span class="capitalization-label">монет</span>
-                        </div>
-                        <div class="capitalization-growth">
-                            <div class="growth-box" id="growth-box-round">
-                                <div class="growth-value" id="growth-round">0%</div>
-                            </div>
-                            <div class="growth-box" id="growth-box-game">
-                                <div class="growth-value" id="growth-game">0%</div>
-                            </div>
-                        </div>
-                    </div>
+            <!-- Доходность: за раунд и за игру (два отдельных блока) -->
+            <div class="portfolio-growth-bar">
+                <div class="portfolio-growth-segment portfolio-growth-round" id="portfolio-growth-round-wrap">
+                    <span class="portfolio-growth-value" id="growth-round">0%</span>
+                </div>
+                <div class="portfolio-growth-segment portfolio-growth-game" id="portfolio-growth-game-wrap">
+                    <span class="portfolio-growth-value" id="growth-game">0%</span>
+                </div>
+            </div>
+
+            <!-- Balance Card (монет на счете) -->
+            <section class="section portfolio-card portfolio-balance-card">
+                <div class="portfolio-balance-row">
+                    <span class="portfolio-balance-label">Монет на счете:</span>
+                    <span class="portfolio-balance-value" id="portfolio-balance-value">0</span>
                 </div>
             </section>
 
-            <!-- Resources Section -->
-            <section class="section">
-                <h2>Мои ресурсы</h2>
+            <div class="portfolio-round-events-block" role="region" aria-label="События раунда">
+                <button type="button" class="build-building-buy-all-btn" id="portfolio-round-events-btn">События раунда</button>
+            </div>
+
+            <!-- Resources Card -->
+            <section class="section portfolio-card">
+                <h2 class="portfolio-card-title">мои ресурсы</h2>
                 <div class="resources-list" id="resources-list">
                     <!-- Заполняется через JS -->
                 </div>
             </section>
 
-            <!-- Buildings Section -->
-            <section class="section">
-                <h2>Мои объекты</h2>
+            <!-- Buildings Card -->
+            <section class="section portfolio-card">
+                <h2 class="portfolio-card-title">мои объекты</h2>
                 <div class="buildings-list" id="buildings-list">
                     <!-- Заполняется через JS -->
                 </div>
@@ -130,6 +171,71 @@
             </section>
         </div>
 
+        <!-- Settings Screen -->
+        <div id="settings-screen" class="screen">
+            <section class="section settings-section">
+                <h2>Настройки</h2>
+                <button type="button" class="settings-change-game-btn" onclick="showGameCodeScreen()">
+                    Сменить игру
+                </button>
+                <button type="button" class="settings-change-game-btn" onclick="showRulesScreen()">
+                    Правила
+                </button>
+            </section>
+        </div>
+
+        <!-- Rules Screen -->
+        <div id="rules-screen" class="screen">
+            <div class="rules-container">
+                <button type="button" class="rules-back-btn build-building-buy-all-btn" onclick="goBackFromRules()">← Назад</button>
+                <h1>📜 Правила игры</h1>
+                <div class="rules-content">
+                    <section class="rules-section">
+                        <h2>🎯 Цель игры</h2>
+                        <p>Заработать больше всех. Ваш заработок - это ваша капитализация. То есть деньги на счете + стоимость всех ресурсов + стоимость всех объектов.</p>
+                    </section>
+                    <section class="rules-section">
+                        <h2>💰 Начало игры</h2>
+                        <ul>
+                            <li>У каждого игрока 2500 монет в начале игры</li>
+                            <li>Первый раунд — время для первых покупок и строительства по текущим ценам</li>
+                        </ul>
+                    </section>
+                    <section class="rules-section">
+                        <h2>🎲 Ход игры</h2>
+                        <ul>
+                            <li>Каждый раунд в королевстве происходят события, влияющие на цены ресурсов и доходы объектов</li>
+                            <li>О том, что произошло в королевстве, вы узнаете из видео раунда</li>
+                            <li>Ваша задача - заработать на изменениях в королевстве</li>
+                        </ul>
+                    </section>
+                    <section class="rules-section">
+                        <h2>⚡ Что можно делать в каждом раунде</h2>
+                        <ul>
+                            <li><strong>Покупать ресурсы</strong> — на бирже по текущим ценам</li>
+                            <li><strong>Продавать ресурсы</strong> — получайте монеты сразу</li>
+                            <li><strong>Строить объекты</strong> — требуют ресурсы, строятся 1 раунд, начинают приносить доход со следующего раунда</li>
+                            <li><strong>Продавать объекты</strong> — выставьте на продажу, будет продано в следующем раунде</li>
+                        </ul>
+                    </section>
+                    <section class="rules-section">
+                        <h2>🏗️ Объекты</h2>
+                        <ul>
+                            <li><strong>Раунд N</strong>: Начали строительство</li>
+                            <li><strong>Раунд N+1</strong>: Объект построен, приносит доход</li>
+                        </ul>
+                    </section>
+                    <section class="rules-section">
+                        <h2>🏆 Победа</h2>
+                        <p>Победитель определяется по капитализации в конце 10 раунда. Больше всех заработал - победил!</p>
+                    </section>
+                </div>
+                <div class="rules-footer">
+                    <button type="button" class="rules-close-btn build-building-buy-all-btn" onclick="goBackFromRules()">Понятно</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Resource Screen -->
         <div id="resource-screen" class="screen">
             <section class="section">
@@ -155,17 +261,6 @@
                             <div class="resource-screen-change-box" id="resource-screen-change-game-box">
                                 <span class="resource-screen-change-label">Игра:</span>
                                 <span class="resource-screen-change-value" id="resource-screen-change-game">0%</span>
-                            </div>
-                        </div>
-                        
-                        <div class="resource-screen-indicators">
-                            <div class="resource-screen-indicator-item">
-                                <span class="resource-screen-indicator-label">Спрос:</span>
-                                <span class="resource-screen-indicator-value" id="resource-screen-demand" data-level="base">базовый</span>
-                            </div>
-                            <div class="resource-screen-indicator-item">
-                                <span class="resource-screen-indicator-label">Предложение:</span>
-                                <span class="resource-screen-indicator-value" id="resource-screen-supply" data-level="base">базовое</span>
                             </div>
                         </div>
                     </div>
@@ -305,6 +400,8 @@
                             </ul>
                         </div>
                         
+                        <button class="build-building-buy-all-btn" onclick="buyAllResourcesForBuilding()">Купить все ресурсы в один клик</button>
+                        
                         <div class="build-building-quantity">
                             <span class="build-building-quantity-label">Количество:</span>
                             <div class="build-building-quantity-controls">
@@ -418,15 +515,15 @@
                         </div>
                     </div>
                     
+                    <div class="market-building-actions">
+                        <button class="market-building-action-btn market-building-buy-btn" onclick="showBuildBuildingScreenFromMarket()">Построить</button>
+                    </div>
+                    
                     <div class="market-building-owners">
                         <h3 class="market-building-owners-title">Владельцы:</h3>
                         <div class="market-building-owners-list" id="market-building-owners-list">
                             <!-- Заполняется через JS -->
                         </div>
-                    </div>
-                    
-                    <div class="market-building-actions">
-                        <button class="market-building-action-btn market-building-buy-btn" onclick="showBuildBuildingScreenFromMarket()">Построить</button>
                     </div>
                 </div>
             </section>
@@ -447,11 +544,6 @@
                         <div class="portfolio-building-stat-item">
                             <span class="portfolio-building-stat-label">Статус:</span>
                             <span class="portfolio-building-status" id="portfolio-building-status">-</span>
-                        </div>
-                        
-                        <div class="portfolio-building-stat-item">
-                            <span class="portfolio-building-stat-label">Количество:</span>
-                            <span class="portfolio-building-stat-value" id="portfolio-building-count">0</span>
                         </div>
                         
                         <div class="portfolio-building-stat-item">
@@ -492,16 +584,20 @@
     <!-- Bottom Navigation -->
     <nav class="bottom-nav">
         <button class="nav-btn active" onclick="showScreen('portfolio')" id="nav-portfolio">
-            <img src="/static/images/портфель.png" class="nav-icon" alt="Портфель">
+            <img src="/design/icons/Портфель.png" class="nav-icon" alt="Портфель" data-icon-active="/design/icons/Портфель.png" data-icon-inactive="/design/icons/Портфель(1).png">
             <span class="nav-label">Портфель</span>
         </button>
         <button class="nav-btn" onclick="showScreen('market')" id="nav-market">
-            <img src="/static/images/биржа.png" class="nav-icon" alt="Биржа">
+            <img src="/design/icons/Биржа(1).png" class="nav-icon" alt="Биржа" data-icon-active="/design/icons/Биржа.png" data-icon-inactive="/design/icons/Биржа(1).png">
             <span class="nav-label">Биржа</span>
         </button>
         <button class="nav-btn" onclick="showScreen('leaderboard')" id="nav-leaderboard">
-            <img src="/static/images/рейтинг.png" class="nav-icon" alt="Рейтинг">
+            <img src="/design/icons/Рейтинг(1).png" class="nav-icon" alt="Рейтинг" data-icon-active="/design/icons/Рейтинг.png" data-icon-inactive="/design/icons/Рейтинг(1).png">
             <span class="nav-label">Рейтинг</span>
+        </button>
+        <button class="nav-btn" onclick="showScreen('settings')" id="nav-settings">
+            <img src="/design/icons/Настройки(1).png" class="nav-icon" alt="Настройки" data-icon-active="/design/icons/Настройки.png" data-icon-inactive="/design/icons/Настройки(1).png">
+            <span class="nav-label">Настройки</span>
         </button>
     </nav>
 
@@ -512,6 +608,59 @@
 
     <!-- Toast Notifications -->
     <div id="toast" class="toast"></div>
+
+    <!-- Модальное окно просмотра аватара -->
+    <div id="avatar-view-modal" class="avatar-view-modal" aria-hidden="true">
+        <button type="button" class="avatar-view-close" id="avatar-view-close" title="Закрыть">&times;</button>
+        <div class="avatar-view-backdrop"></div>
+        <div class="avatar-view-content">
+            <img id="avatar-view-image" src="" alt="Аватар" class="avatar-view-image">
+        </div>
+    </div>
+
+    <!-- Карточка игрока из рейтинга (как на вебе, адаптировано под миниап) -->
+    <div id="miniapp-player-modal" class="miniapp-player-modal" aria-hidden="true">
+        <div class="miniapp-player-modal-backdrop"></div>
+        <div class="miniapp-player-modal-sheet">
+            <button type="button" class="miniapp-player-modal-close" id="miniapp-player-modal-close" title="Закрыть">&times;</button>
+            <button type="button" class="miniapp-player-modal-nav miniapp-player-modal-nav-left" id="miniapp-player-modal-nav-left" title="Предыдущий игрок">‹</button>
+            <button type="button" class="miniapp-player-modal-nav miniapp-player-modal-nav-right" id="miniapp-player-modal-nav-right" title="Следующий игрок">›</button>
+            <div class="miniapp-player-modal-body">
+                <div class="miniapp-player-modal-left">
+                    <div class="miniapp-player-modal-avatar-plaque-column">
+                        <div class="miniapp-player-modal-avatar-wrap">
+                            <img id="miniapp-player-modal-avatar" src="" alt="" class="miniapp-player-modal-avatar">
+                            <div id="miniapp-player-modal-avatar-fallback" class="miniapp-player-modal-avatar-fallback" style="display: none;"></div>
+                        </div>
+                        <div class="miniapp-player-modal-plaque">
+                            <div class="miniapp-player-modal-plaque-img-wrap">
+                                <img class="miniapp-player-modal-plaque-img" src="/design/icons/Дощечка.png" alt="">
+                            </div>
+                            <div class="miniapp-player-modal-rank-overlay">
+                                <div class="miniapp-player-modal-rank-line">
+                                    <span id="miniapp-player-modal-rank-num" class="miniapp-player-modal-rank-num">1</span>
+                                    <span class="miniapp-player-modal-rank-label">место</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="miniapp-player-modal-right">
+                    <h2 id="miniapp-player-modal-name" class="miniapp-player-modal-name"></h2>
+                    <div class="miniapp-player-modal-pills-row">
+                        <span class="miniapp-player-modal-pill miniapp-player-modal-pill-round" id="miniapp-player-modal-pill-round">0%</span>
+                        <span class="miniapp-player-modal-pill miniapp-player-modal-pill-game" id="miniapp-player-modal-pill-game">0%</span>
+                    </div>
+                    <div id="miniapp-player-modal-money" class="miniapp-player-modal-money">
+                        <span class="miniapp-player-modal-money-value" id="miniapp-player-modal-money-value"></span>
+                        <span class="miniapp-player-modal-money-suffix">монет</span>
+                    </div>
+                    <div class="miniapp-player-modal-owns-title">Владеет:</div>
+                    <ul id="miniapp-player-modal-buildings" class="miniapp-player-modal-buildings-list"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="/static/miniapp.js"></script>
 </body>

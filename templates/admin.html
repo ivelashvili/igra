@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Админ-панель - Королевская Биржа</title>
+    <link rel="stylesheet" href="/static/admin.css">
+</head>
+<body>
+    <!-- Экран авторизации -->
+    <div id="login-screen" class="admin-screen">
+        <div class="login-container">
+            <div class="login-header">
+                <img src="/static/images/logo.png" alt="Логотип" class="login-logo">
+                <h1>Админ-панель</h1>
+                <p>Королевская Биржа</p>
+            </div>
+            <form id="login-form" class="login-form">
+                <div class="form-group">
+                    <label for="admin-password">Пароль администратора:</label>
+                    <input type="password" id="admin-password" class="form-input" required>
+                </div>
+                <div id="login-error" class="error-message" style="display: none;"></div>
+                <button type="submit" class="btn btn-primary">Войти</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Основная админ-панель -->
+    <div id="admin-panel" class="admin-screen" style="display: none;">
+        <header class="admin-header">
+            <div class="admin-header-content">
+                <h1>Админ-панель</h1>
+                <div class="admin-header-actions">
+                    <button id="logout-btn" class="btn btn-secondary">Выйти</button>
+                </div>
+            </div>
+        </header>
+
+        <main class="admin-main">
+            <!-- Боковое меню -->
+            <aside class="admin-sidebar">
+                <nav class="admin-nav">
+                    <button class="nav-item active" data-section="games">
+                        <span class="nav-icon">🎮</span>
+                        <span class="nav-text">Игры</span>
+                    </button>
+                    <button class="nav-item" data-section="create-game">
+                        <span class="nav-icon">➕</span>
+                        <span class="nav-text">Создать игру</span>
+                    </button>
+                    <button class="nav-item" data-section="archive">
+                        <span class="nav-icon">📦</span>
+                        <span class="nav-text">Архив</span>
+                    </button>
+                    <button class="nav-item" data-section="settings">
+                        <span class="nav-icon">⚙️</span>
+                        <span class="nav-text">Настройки</span>
+                    </button>
+                </nav>
+            </aside>
+
+            <!-- Контент -->
+            <div class="admin-content">
+                <!-- Секция: Список активных игр -->
+                <section id="section-games" class="admin-section active">
+                    <div class="section-header">
+                        <h2>Активные игры</h2>
+                        <button id="refresh-games-btn" class="btn btn-secondary">Обновить</button>
+                    </div>
+                    <div id="games-list" class="games-list">
+                        <div class="loading">Загрузка...</div>
+                    </div>
+                </section>
+
+                <!-- Секция: Создание новой игры -->
+                <section id="section-create-game" class="admin-section">
+                    <div class="section-header">
+                        <h2>Создать новую игру</h2>
+                    </div>
+                    <form id="create-game-form" class="admin-form">
+                        <div class="form-group">
+                            <label for="game-num-players">Количество игроков:</label>
+                            <input type="number" id="game-num-players" class="form-input" min="5" max="30" value="10" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="game-company-name">Название компании (опционально):</label>
+                            <input type="text" id="game-company-name" class="form-input" placeholder="Королевская Биржа">
+                        </div>
+                        <div id="create-game-error" class="error-message" style="display: none;"></div>
+                        <div id="create-game-success" class="success-message" style="display: none;"></div>
+                        <button type="submit" class="btn btn-primary">Создать игру</button>
+                    </form>
+                </section>
+
+                <!-- Секция: Архив игр -->
+                <section id="section-archive" class="admin-section">
+                    <div class="section-header">
+                        <h2>Архив игр</h2>
+                        <button id="refresh-archive-btn" class="btn btn-secondary">Обновить</button>
+                    </div>
+                    <div id="archive-list" class="games-list">
+                        <div class="loading">Загрузка...</div>
+                    </div>
+                </section>
+
+                <!-- Секция: Настройки игры -->
+                <section id="section-settings" class="admin-section">
+                    <div class="section-header">
+                        <h2>Настройки игры</h2>
+                        <select id="settings-game-select" class="form-input">
+                            <option value="">Выберите игру...</option>
+                        </select>
+                    </div>
+                    <div id="game-settings-content" style="display: none;">
+                        <!-- Настройки будут загружаться динамически -->
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Модальное окно: Управление игрой -->
+    <div id="game-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="game-modal-title">Управление игрой</h2>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <button type="button" id="save-all-settings-btn" class="btn btn-primary">Сохранить все настройки</button>
+                    <button class="modal-close" onclick="closeGameModal()">&times;</button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div id="game-modal-tabs" class="tabs">
+                    <button class="tab-btn active" data-tab="info">Информация</button>
+                    <button class="tab-btn" data-tab="rounds">Раунды</button>
+                    <button class="tab-btn" data-tab="players">Персонажи</button>
+                    <button class="tab-btn" data-tab="content">Контент</button>
+                    <button class="tab-btn" data-tab="events">События</button>
+                    <button class="tab-btn" data-tab="game-config">Ресурсы/Объекты</button>
+                </div>
+
+                <!-- Вкладка: Информация -->
+                <div id="tab-info" class="tab-content active">
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <label>Код игры:</label>
+                            <span id="modal-game-code">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>ID игры:</label>
+                            <span id="modal-game-id">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Текущий раунд:</label>
+                            <span id="modal-game-round">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Количество игроков:</label>
+                            <span id="modal-game-players-count">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Статус:</label>
+                            <span id="modal-game-status">-</span>
+                        </div>
+                    </div>
+                    <div class="modal-actions">
+                        <button id="archive-game-btn" class="btn btn-danger">Завершить игру (в архив)</button>
+                    </div>
+                </div>
+
+                <!-- Вкладка: Раунды -->
+                <div id="tab-rounds" class="tab-content">
+                    <div id="rounds-settings">
+                        <div class="loading">Загрузка...</div>
+                    </div>
+                </div>
+
+                <!-- Вкладка: Персонажи (каталог для экрана выбора в игре) -->
+                <div id="tab-players" class="tab-content">
+                    <div class="section-header">
+                        <h3>Персонажи для выбора</h3>
+                        <p class="info-text" style="margin-top: 4px;">Эти персонажи отображаются на экране выбора. В рейтинг и игру попадают только те, кого выбрал игрок.</p>
+                        <button id="add-player-btn" class="btn btn-primary">Добавить персонажа</button>
+                    </div>
+                    <div id="players-list" class="players-list">
+                        <div class="loading">Загрузка...</div>
+                    </div>
+                </div>
+
+                <!-- Вкладка: Контент -->
+                <div id="tab-content" class="tab-content">
+                    <div class="section-header">
+                        <h3>Контент для раундов</h3>
+                    </div>
+                    <div id="round-content-list" class="round-content-list">
+                        <div class="loading">Загрузка...</div>
+                    </div>
+                </div>
+
+                <!-- Вкладка: События (текст + картинка на раунд) -->
+                <div id="tab-events" class="tab-content">
+                    <div class="section-header">
+                        <h3>События по раундам</h3>
+                        <p class="info-text" style="margin-top: 4px;">Текст и иллюстрация для каждого раунда. Загрузка файла идёт через ImgBB с тем же ключом на сервере, что и для аватаров персонажей; можно также вставить URL картинки вручную.</p>
+                    </div>
+                    <div id="round-events-list" class="round-content-list">
+                        <div class="loading">Загрузка...</div>
+                    </div>
+                </div>
+
+                <!-- Вкладка: Ресурсы/Объекты -->
+                <div id="tab-game-config" class="tab-content">
+                    <div class="section-header">
+                        <h3>Настройка ресурсов и объектов</h3>
+                        <p class="info-text">Настройка доступных ресурсов и объектов для этой игры</p>
+                    </div>
+                    <div id="game-config-content" class="game-config-content">
+                        <div class="loading">Загрузка...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно: Добавление персонажа -->
+    <div id="add-player-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Добавить персонажа</h2>
+                <button class="modal-close" onclick="closeAddPlayerModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="add-player-form" class="admin-form">
+                    <div class="form-group">
+                        <label for="player-character-name">Имя персонажа:</label>
+                        <input type="text" id="player-character-name" class="form-input" required placeholder="Как будет отображаться на экране выбора">
+                    </div>
+                    <div class="form-group">
+                        <label for="player-avatar">URL изображения персонажа:</label>
+                        <div style="display: flex; gap: 10px; align-items: flex-end;">
+                            <input type="url" id="player-avatar" class="form-input" placeholder="https://i.ibb.co/xxxxx/image.png или /static/images/characters/Имя.png" style="flex: 1;" required>
+                            <input type="file" id="player-avatar-file" accept="image/*" style="display: none;">
+                            <button type="button" class="btn btn-secondary" onclick="document.getElementById('player-avatar-file').click()" style="white-space: nowrap;">
+                                📤 Загрузить
+                            </button>
+                        </div>
+                        <div id="player-avatar-upload-status" style="margin-top: 5px; font-size: 0.9em; color: #666; display: none;"></div>
+                        <img id="player-avatar-preview" src="" alt="Превью изображения" style="max-width: 200px; max-height: 200px; margin-top: 10px; border-radius: 8px; border: 2px solid #8b4513; display: none;">
+                    </div>
+                    <div id="add-player-error" class="error-message" style="display: none;"></div>
+                    <div class="modal-actions">
+                        <button type="submit" class="btn btn-primary">Добавить</button>
+                        <button type="button" class="btn btn-secondary" onclick="closeAddPlayerModal()">Отмена</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно: Редактирование игрока -->
+    <div id="edit-player-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Редактировать игрока</h2>
+                <button class="modal-close" onclick="closeEditPlayerModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="edit-player-form" class="admin-form">
+                    <input type="hidden" id="edit-player-id">
+                    <input type="hidden" id="edit-character-original-name">
+                    <div class="form-group">
+                        <label for="edit-player-name">Имя игрока:</label>
+                        <input type="text" id="edit-player-name" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-player-character-name">Имя персонажа:</label>
+                        <input type="text" id="edit-player-character-name" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-player-avatar">URL изображения персонажа:</label>
+                        <div style="display: flex; gap: 10px; align-items: flex-end;">
+                            <input type="url" id="edit-player-avatar" class="form-input" placeholder="https://i.ibb.co/xxxxx/image.png или /static/images/characters/Имя.png" style="flex: 1;" required>
+                            <input type="file" id="edit-player-avatar-file" accept="image/*" style="display: none;">
+                            <button type="button" class="btn btn-secondary" onclick="document.getElementById('edit-player-avatar-file').click()" style="white-space: nowrap;">
+                                📤 Загрузить
+                            </button>
+                        </div>
+                        <div id="edit-player-avatar-upload-status" style="margin-top: 5px; font-size: 0.9em; color: #666; display: none;"></div>
+                        <img id="edit-player-avatar-preview" src="" alt="Превью изображения" style="max-width: 200px; max-height: 200px; margin-top: 10px; border-radius: 8px; border: 2px solid #8b4513; display: none;">
+                    </div>
+                    <div id="edit-player-error" class="error-message" style="display: none;"></div>
+                    <div class="modal-actions">
+                        <button type="submit" class="btn btn-primary">Сохранить</button>
+                        <button type="button" class="btn btn-secondary" onclick="closeEditPlayerModal()">Отмена</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/admin.js"></script>
+    <script>
+        // Получаем API ключ ImgBB с сервера после авторизации
+        // Это будет вызвано из admin.js после успешного логина
+        // Не загружаем здесь, чтобы избежать ошибок 401
+    </script>
+</body>
+</html>

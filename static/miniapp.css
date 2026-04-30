@@ -1,4 +1,32 @@
-@import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
+/* Noto Sans — основной шрифт и цифры */
+@font-face {
+    font-family: 'Noto Sans';
+    src: url('/design/Noto%20Sans/NotoSans-Regular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Noto Sans';
+    src: url('/design/Noto%20Sans/NotoSans-Bold.ttf') format('truetype');
+    font-weight: bold;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Noto Sans';
+    src: url('/design/Noto%20Sans/NotoSans-Italic.ttf') format('truetype');
+    font-weight: normal;
+    font-style: italic;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Noto Sans';
+    src: url('/design/Noto%20Sans/NotoSans-BoldItalic.ttf') format('truetype');
+    font-weight: bold;
+    font-style: italic;
+    font-display: swap;
+}
 
 /* Шрифт Stieglitz для заголовков */
 @font-face {
@@ -15,8 +43,18 @@
     box-sizing: border-box;
 }
 
+/*
+ * Масштабирование от размера экрана:
+ * Базовый размер шрифта (html) задаётся через clamp — от узких экранов (~320px)
+ * до широких (~600px+) все размеры в em/rem масштабируются автоматически.
+ * У flex-блоков с текстом добавлен min-width: 0, чтобы контент не вылезал за границы.
+ */
+html {
+    font-size: clamp(13px, 1.5vw + 11px, 18px);
+}
+
 body {
-    font-family: 'Crimson Text', serif;
+    font-family: 'Noto Sans', sans-serif;
     font-size: 1.25em;
     background-image: url('/static/images/background.jpeg');
     background-size: cover;
@@ -70,32 +108,41 @@ body::before {
 
 .logo-container {
     flex-shrink: 0;
-    width: 80px;
+    width: 64px;
     display: flex;
     justify-content: center;
     align-items: center;
 }
 
 .logo {
-    height: 80px;
+    height: 64px;
     width: auto;
     filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
 }
 
 .header-text {
     flex: 1;
+    min-width: 0;
     text-align: left;
 }
 
-.header-text h1 {
-    font-family: 'Stieglitz', serif;
-    font-size: 2.25em;
-    font-weight: normal;
+.header-change-game-btn {
+    background: rgba(139, 69, 19, 0.6);
+    border: 2px solid #8b4513;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 1.2em;
+    cursor: pointer;
+    transition: background 0.3s, transform 0.2s;
     color: #d4af37;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8), 0 0 15px rgba(212, 175, 55, 0.3);
-    margin: 0;
-    letter-spacing: 1px;
+    flex-shrink: 0;
 }
+
+.header-change-game-btn:hover {
+    background: rgba(139, 69, 19, 0.8);
+    transform: scale(1.1);
+}
+
 
 /* Player Profile Block */
 .player-profile-block {
@@ -114,10 +161,17 @@ body::before {
     display: flex;
     justify-content: center;
     align-items: center;
+    cursor: pointer;
+}
+.player-avatar-section:focus {
+    outline: 2px solid #D3B035;
+    outline-offset: 2px;
+    border-radius: 50%;
 }
 
 .player-profile-info {
     flex: 1;
+    min-width: 0;
     text-align: left;
 }
 
@@ -125,6 +179,7 @@ body::before {
     font-size: 1.125em;
     color: #3a2a1a;
     margin-top: 5px;
+    font-weight: bold;
 }
 
 .round-info strong {
@@ -152,13 +207,329 @@ body::before {
     font-size: 60px;
 }
 
+/* Модальное окно просмотра аватара */
+.avatar-view-modal {
+    display: none;
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10002;
+    align-items: center;
+    justify-content: center;
+}
+.avatar-view-modal.is-open {
+    display: flex;
+}
+.avatar-view-backdrop {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    cursor: pointer;
+}
+.avatar-view-content {
+    position: relative;
+    z-index: 1;
+    max-width: 90vw;
+    max-height: 90vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.avatar-view-image {
+    max-width: 90vw;
+    max-height: 90vh;
+    width: auto;
+    height: auto;
+    border-radius: 12px;
+    border: 3px solid #8b4513;
+    object-fit: contain;
+}
+.avatar-view-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 10003;
+    width: 44px;
+    height: 44px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    font-size: 28px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: background 0.2s;
+}
+.avatar-view-close:hover {
+    background: rgba(211, 176, 53, 0.9);
+    color: #1a1510;
+}
+
 .player-name {
-    font-family: 'Stieglitz', serif;
-    font-size: 1.625em;
+    font-family: 'Noto Sans', sans-serif;
+    font-size: 0.95em;
     font-weight: normal;
     margin-bottom: 5px;
+    color: #3a2a1a;
+}
+
+/* Portfolio: header as card */
+.portfolio-header-card {
+    border-radius: 12px;
+    margin: 10px 16px 0 16px;
+    padding: 12px 12px 12px 16px;
+    background: linear-gradient(135deg, rgba(222, 184, 135, 0.25) 0%, rgba(205, 180, 150, 0.25) 100%);
+    border: 1px solid rgba(139, 69, 19, 0.4);
+    backdrop-filter: blur(8px);
+}
+.header-text h1 {
+    font-family: 'Stieglitz', serif;
+    font-size: clamp(1.1rem, 5vw, 2.25em);
+    font-weight: normal;
     color: #d4af37;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8), 0 0 15px rgba(212, 175, 55, 0.3);
+    margin: 0;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-right: 0;
+}
+.round-in-header {
+    margin-top: 4px;
+    font-size: 0.65em;
+    font-weight: bold;
+    color: #3a2a1a;
+}
+.round-in-header #current-round {
+    color: #3a2a1a;
+    font-weight: bold;
+}
+
+/* Portfolio: character card */
+.portfolio-character-card {
+    border-radius: 12px;
+    margin: 10px 16px;
+    padding: 14px 16px;
+    background: linear-gradient(135deg, rgba(222, 184, 135, 0.25) 0%, rgba(205, 180, 150, 0.25) 100%);
+    border: 1px solid rgba(139, 69, 19, 0.4);
+    backdrop-filter: blur(8px);
+}
+.capitalization-label-inline {
+    font-size: 0.65em;
+    color: #5c4a32;
+    margin-bottom: 2px;
+}
+.portfolio-character-card .capitalization-main {
+    padding-left: 0;
+    margin-top: 4px;
+}
+.portfolio-character-card .capitalization-value {
+    font-size: 1.5em;
+}
+
+/* Portfolio: рост за раунд / за игру — два блока по ширине как остальные, поуже по высоте */
+.portfolio-growth-bar {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    margin: 10px 0;
+}
+.portfolio-growth-segment {
+    flex: 1;
+    min-width: 0;
+    padding: 5px 12px;
+    text-align: center;
+    border-radius: 12px;
+    border: 1px solid rgba(139, 69, 19, 0.4);
+    background: linear-gradient(135deg, rgba(222, 184, 135, 0.25) 0%, rgba(205, 180, 150, 0.25) 100%);
+    color: #3a2a1a;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+.portfolio-growth-segment.portfolio-growth-round.positive {
+    background: rgba(40, 167, 69, 0.3);
+    border-color: #0a3d0a;
+}
+.portfolio-growth-segment.portfolio-growth-round.positive .portfolio-growth-value {
+    color: #0a3d0a;
+}
+.portfolio-growth-segment.portfolio-growth-round.negative {
+    background: rgba(220, 53, 69, 0.2);
+    border-color: #3d1518;
+}
+.portfolio-growth-segment.portfolio-growth-round.negative .portfolio-growth-value {
+    color: #3d1518;
+}
+.portfolio-growth-segment.portfolio-growth-game.positive {
+    background: rgba(40, 167, 69, 0.3);
+    border-color: #0a3d0a;
+}
+.portfolio-growth-segment.portfolio-growth-game.positive .portfolio-growth-value {
+    color: #0a3d0a;
+}
+.portfolio-growth-segment.portfolio-growth-game.negative {
+    background: rgba(220, 53, 69, 0.2);
+    border-color: #3d1518;
+}
+.portfolio-growth-segment.portfolio-growth-game.negative .portfolio-growth-value {
+    color: #3d1518;
+}
+.portfolio-growth-value {
+    font-family: 'Noto Sans', sans-serif;
+    font-weight: bold;
+    font-size: 0.95em;
+    color: inherit;
+    line-height: 1.2;
+}
+
+/* Portfolio: balance card */
+.portfolio-balance-card {
+    border-radius: 12px;
+    margin: 10px 0;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, rgba(222, 184, 135, 0.25) 0%, rgba(205, 180, 150, 0.25) 100%);
+    border: 1px solid rgba(139, 69, 19, 0.4);
+    backdrop-filter: blur(8px);
+}
+.portfolio-balance-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.portfolio-balance-label {
+    font-size: 0.65em;
+    color: #3a2a1a;
+    font-weight: bold;
+}
+.portfolio-balance-value {
+    font-family: 'Noto Sans', sans-serif;
+    font-size: 1em;
+    font-weight: bold;
+    color: #3a2a1a;
+}
+
+/* Portfolio: card sections */
+.portfolio-card {
+    border-radius: 12px;
+    margin: 10px 0;
+    padding: 14px 16px;
+    background: linear-gradient(135deg, rgba(222, 184, 135, 0.25) 0%, rgba(205, 180, 150, 0.25) 100%);
+    border: 1px solid rgba(139, 69, 19, 0.4);
+    backdrop-filter: blur(8px);
+}
+.portfolio-card-title {
+    font-family: 'Stieglitz', serif;
+    font-size: 1em;
+    color: #3a2a1a;
+    margin-bottom: 12px;
+    text-align: left;
+    border: none;
+    padding: 0;
+    text-shadow: none;
+}
+/* Переопределяем .section h2: заголовки «мои ресурсы» и «мои объекты» — 1em */
+.portfolio-card .portfolio-card-title {
+    font-size: 1em;
+}
+/* Тонкая линия под заголовком «мои ресурсы», высота блока ~80% */
+.portfolio-card:has(.resources-list) {
+    padding: 11px 16px;
+}
+.portfolio-card:has(.resources-list) .portfolio-card-title {
+    border-bottom: 1px solid rgba(58, 42, 26, 0.4);
+    padding-bottom: 8px;
+    margin-bottom: 3px;
+}
+/* То же для блока «мои объекты»: список с разделителями, высота ~80%, без пустого места снизу */
+.portfolio-card:has(.buildings-list) {
+    padding: 11px 16px 0 16px;
+}
+.portfolio-card:has(.buildings-list) .portfolio-card-title {
+    border-bottom: 1px solid rgba(58, 42, 26, 0.4);
+    padding-bottom: 8px;
+    margin-bottom: 3px;
+}
+.portfolio-empty-message {
+    font-size: 0.65em;
+    color: #3a2a1a;
+    text-align: center;
+    padding: 20px;
+}
+
+/* Portfolio: resource rows with icon */
+.portfolio-resource-row .resource-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.resource-icon {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+.resource-value-small {
+    font-size: 0.65em;
+    color: #5c4a32;
+    margin-right: 8px;
+}
+
+/* Portfolio: building rows with icon and status pill */
+.portfolio-building-row .building-info {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+.portfolio-building-row .building-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+.portfolio-building-row .building-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+.building-icon {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+.building-status-pill {
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.65em;
+    font-weight: bold;
+}
+.building-status-pill.active {
+    background: rgba(40, 167, 69, 0.35);
+    color: #155724;
+}
+.building-status-pill.building {
+    background: rgba(255, 193, 7, 0.5);
+    color: #856404;
+}
+.building-status-pill.completed {
+    background: rgba(40, 167, 69, 0.35);
+    color: #155724;
+}
+.building-status-pill.for_sale,
+.building-status-pill.sold {
+    background: rgba(108, 117, 125, 0.4);
+    color: #383d41;
 }
 
 /* Balance Section */
@@ -184,7 +555,7 @@ body::before {
 }
 
 .capitalization-value {
-    font-family: 'Stieglitz', serif;
+    font-family: 'Noto Sans', sans-serif;
     font-size: 3.125em;
     font-weight: normal;
     color: #d4af37;
@@ -192,7 +563,8 @@ body::before {
 }
 
 .capitalization-label {
-    font-size: 1.25em;
+    font-family: 'Noto Sans', sans-serif;
+    font-size: 0.65em;
     color: #c9a961;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
 }
@@ -225,6 +597,7 @@ body::before {
 }
 
 .growth-value {
+    font-family: 'Noto Sans', sans-serif;
     font-size: 1em;
     font-weight: bold;
     color: #1a5a1a;
@@ -270,14 +643,49 @@ body::before {
     text-align: center;
     border-bottom: 2px solid #8b4513;
     padding-bottom: 8px;
-    font-weight: normal;
+}
+#market-screen .section h2 {
+    font-size: 1em;
+}
+#leaderboard-screen .section h2 {
+    font-size: 1em;
+}
+#settings-screen .section h2 {
+    font-size: 1em;
+}
+#resource-screen .section h2 {
+    font-size: 1em;
+    border-bottom: none;
+    padding-bottom: 0;
+    margin-bottom: 0;
 }
 
 /* Resources List */
 .resources-list {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 0;
+}
+
+/* На странице портфеля — список без прямоугольников, с тонкими разделителями, высота строк ~80% */
+.portfolio-card .resources-list .resource-item.portfolio-resource-row {
+    background: none;
+    border: none;
+    border-radius: 0;
+    backdrop-filter: none;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(58, 42, 26, 0.4);
+    max-width: 100%;
+}
+.portfolio-card .resources-list .resource-item.portfolio-resource-row .resource-icon {
+    width: 29px;
+    height: 29px;
+}
+.portfolio-card .resources-list .resource-item.portfolio-resource-row .resource-left {
+    gap: 8px;
+}
+.portfolio-card .resources-list .resource-item.portfolio-resource-row:last-child {
+    border-bottom: none;
 }
 
 .resource-item {
@@ -318,7 +726,7 @@ body::before {
 .resource-name {
     font-weight: bold;
     color: #3a2a1a;
-    font-size: 1.25em;
+    font-size: 0.65em;
 }
 
 .resource-name.money-name {
@@ -329,14 +737,15 @@ body::before {
 }
 
 .resource-amount {
-    font-size: 1.875em;
+    font-family: 'Noto Sans', sans-serif;
+    font-size: 1em;
     color: #3a2a1a;
     font-weight: bold;
     text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.3);
 }
 
 .resource-value {
-    font-size: 1.0625em;
+    font-size: 1em;
     color: #c9a961;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
 }
@@ -346,6 +755,34 @@ body::before {
     display: flex;
     flex-direction: column;
     gap: 10px;
+}
+
+/* На странице портфеля — список без прямоугольников, с тонкими разделителями, высота ~80% */
+.portfolio-card .buildings-list {
+    gap: 0;
+}
+.portfolio-card .buildings-list .building-item.portfolio-building-row {
+    background: none;
+    border: none;
+    border-radius: 0;
+    backdrop-filter: none;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(58, 42, 26, 0.4);
+    max-width: 100%;
+}
+.portfolio-card .buildings-list .building-item.portfolio-building-row .building-icon {
+    width: 29px;
+    height: 29px;
+}
+.portfolio-card .buildings-list .building-item.portfolio-building-row .building-left {
+    gap: 8px;
+}
+.portfolio-card .buildings-list .building-item.portfolio-building-row .building-right {
+    gap: 8px;
+}
+.portfolio-card .buildings-list .building-item.portfolio-building-row:last-child {
+    border-bottom: none;
+    padding-bottom: 4px;
 }
 
 .building-item {
@@ -396,11 +833,11 @@ body::before {
 .building-name {
     font-weight: bold;
     color: #3a2a1a;
-    font-size: 1.25em;
+    font-size: 0.65em;
 }
 
 .building-status {
-    font-size: 1.0625em;
+    font-size: 0.65em;
     padding: 2px 8px;
     border-radius: 4px;
     display: inline-block;
@@ -427,14 +864,15 @@ body::before {
 }
 
 .building-count {
-    font-size: 1.875em;
+    font-family: 'Noto Sans', sans-serif;
+    font-size: 1em;
     color: #3a2a1a;
     font-weight: bold;
     text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.3);
 }
 
 .building-value {
-    font-size: 1.0625em;
+    font-size: 1em;
     color: #c9a961;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
 }
@@ -463,6 +901,7 @@ body::before {
 }
 
 .price-value {
+    font-family: 'Noto Sans', sans-serif;
     font-size: 1.625em;
     color: #d4af37;
     font-weight: bold;
@@ -616,7 +1055,7 @@ body::before {
     font-size: 1.25em;
     background: rgba(255, 255, 255, 0.9);
     color: #333;
-    font-family: 'Crimson Text', serif;
+    font-family: 'Noto Sans', sans-serif;
 }
 
 .close {
@@ -695,7 +1134,7 @@ body::before {
     margin-top: 10px;
     background: rgba(255, 255, 255, 0.9);
     color: #333;
-    font-family: 'Crimson Text', serif;
+    font-family: 'Noto Sans', sans-serif;
 }
 
 .confirm-btn {
@@ -746,17 +1185,18 @@ body::before {
     100% { transform: rotate(360deg); }
 }
 
-/* Toast Notifications */
+/* Toast Notifications: центр экрана, поверх всего */
 .toast {
     position: fixed;
-    bottom: 20px;
+    top: 50%;
     left: 50%;
-    transform: translateX(-50%);
+    transform: translate(-50%, -50%);
     background: rgba(51, 51, 51, 0.9);
     color: #3a2a1a;
+    font-size: 0.65em;
     padding: 15px 20px;
     border-radius: 8px;
-    z-index: 3000;
+    z-index: 9999;
     display: none;
     max-width: 90%;
     text-align: center;
@@ -766,7 +1206,7 @@ body::before {
 
 .toast.show {
     display: block;
-    animation: slideUp 0.3s;
+    animation: toastShow 0.3s ease-out;
 }
 
 .toast.success {
@@ -777,13 +1217,13 @@ body::before {
     background: rgba(220, 53, 69, 0.9);
 }
 
-@keyframes slideUp {
+@keyframes toastShow {
     from {
-        transform: translateX(-50%) translateY(100px);
+        transform: translate(-50%, -50%) scale(0.9);
         opacity: 0;
     }
     to {
-        transform: translateX(-50%) translateY(0);
+        transform: translate(-50%, -50%) scale(1);
         opacity: 1;
     }
 }
@@ -795,6 +1235,10 @@ body::before {
 
 .screen.active {
     display: block;
+}
+
+#portfolio-screen {
+    padding: 0 16px 20px;
 }
 
 /* Leaderboard */
@@ -816,7 +1260,8 @@ body::before {
 }
 
 .leaderboard-rank {
-    font-size: 1.875em;
+    font-family: 'Noto Sans', sans-serif;
+    font-size: 1.5em;
     font-weight: bold;
     color: #d4af37;
     min-width: 40px;
@@ -826,17 +1271,19 @@ body::before {
 
 .leaderboard-info {
     flex: 1;
+    min-width: 0;
 }
 
 .leaderboard-name {
     font-weight: bold;
     color: #3a2a1a;
-    font-size: 1.25em;
+    font-size: 0.65em;
     margin-bottom: 3px;
 }
 
 .leaderboard-capitalization {
-    font-size: 1.125em;
+    font-family: 'Noto Sans', sans-serif;
+    font-size: 1em;
     color: #c9a961;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
     margin-bottom: 5px;
@@ -870,7 +1317,8 @@ body::before {
 }
 
 .leaderboard-growth-value {
-    font-size: 0.875em;
+    font-family: 'Noto Sans', sans-serif;
+    font-size: 0.65em;
     font-weight: bold;
     color: #1a5a1a;
 }
@@ -891,7 +1339,7 @@ body::before {
 }
 
 .leaderboard-arrow {
-    font-size: 1.5em;
+    font-size: 1em;
     font-weight: bold;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
 }
@@ -909,6 +1357,434 @@ body::before {
     height: 1.5em;
 }
 
+.leaderboard-item.leaderboard-item--clickable {
+    cursor: pointer;
+    -webkit-tap-highlight-color: rgba(212, 175, 55, 0.25);
+    transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.leaderboard-item.leaderboard-item--clickable:active {
+    background: rgba(139, 69, 19, 0.35);
+    transform: scale(0.995);
+}
+
+/* Карточка игрока из рейтинга (нижний лист, как в типичном Telegram UI) */
+.miniapp-player-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 10050;
+    display: none;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: stretch;
+    pointer-events: none;
+}
+
+.miniapp-player-modal.miniapp-player-modal--open {
+    display: flex;
+    pointer-events: auto;
+}
+
+.miniapp-player-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(20, 12, 8, 0.55);
+    pointer-events: auto;
+}
+
+.miniapp-player-modal-sheet {
+    position: relative;
+    max-height: min(90vh, 100%);
+    width: 100%;
+    box-sizing: border-box;
+    background: #cdac7f;
+    border-radius: 18px 18px 0 0;
+    border: 2px solid #8b4513;
+    border-bottom: none;
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.35);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    pointer-events: auto;
+    animation: miniapp-player-sheet-in 0.22s ease-out;
+}
+
+@keyframes miniapp-player-sheet-in {
+    from {
+        transform: translateY(100%);
+        opacity: 0.85;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.miniapp-player-modal-close {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    z-index: 3;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    margin: 0;
+    border: none;
+    border-radius: 10px;
+    background: rgba(139, 69, 19, 0.2);
+    color: #3a2a1a;
+    font-size: 1.75rem;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.miniapp-player-modal-nav {
+    position: absolute;
+    top: 36%;
+    transform: translateY(-50%);
+    z-index: 2;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 2px solid #8b4513;
+    border-radius: 50%;
+    background: rgba(255, 248, 240, 0.92);
+    color: #5c3d2e;
+    font-size: 1.5rem;
+    font-weight: bold;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.miniapp-player-modal-nav:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.miniapp-player-modal-nav-left {
+    left: 8px;
+}
+
+.miniapp-player-modal-nav-right {
+    right: 8px;
+}
+
+.miniapp-player-modal-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 48px 16px 24px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    max-height: min(90vh, 100%);
+}
+
+@media (min-width: 480px) {
+    .miniapp-player-modal-body {
+        flex-direction: row;
+        align-items: flex-start;
+        justify-content: center;
+        gap: 20px;
+        padding: 48px 24px 28px;
+    }
+}
+
+.miniapp-player-modal-left {
+    flex-shrink: 0;
+    display: flex;
+    justify-content: center;
+    width: 100%;
+}
+
+@media (min-width: 480px) {
+    .miniapp-player-modal-left {
+        width: auto;
+    }
+}
+
+.miniapp-player-modal-avatar-plaque-column {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: 280px;
+    margin: 0 auto;
+}
+
+.miniapp-player-modal-avatar-wrap {
+    width: min(72vw, 220px);
+    aspect-ratio: 1;
+    border: 3px solid #5c3d2e;
+    border-radius: 6px;
+    overflow: hidden;
+    background: rgba(80, 55, 40, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 2;
+}
+
+.miniapp-player-modal-plaque {
+    position: relative;
+    width: 75%;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: -2.5%;
+    z-index: 1;
+}
+
+.miniapp-player-modal-plaque-img-wrap {
+    width: 100%;
+    aspect-ratio: 3 / 2;
+    overflow: hidden;
+    line-height: 0;
+}
+
+.miniapp-player-modal-plaque-img {
+    width: 100%;
+    height: 100%;
+    object-fit: fill;
+    display: block;
+}
+
+.miniapp-player-modal-rank-overlay {
+    position: absolute;
+    inset: 0;
+    padding: 0 10px;
+    box-sizing: border-box;
+    pointer-events: none;
+}
+
+.miniapp-player-modal-rank-line {
+    position: absolute;
+    left: 50%;
+    top: 60%;
+    transform: translate(-50%, -50%);
+    display: inline-flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: baseline;
+    justify-content: center;
+    gap: 0.5em;
+    max-width: calc(100% - 20px);
+}
+
+.miniapp-player-modal-avatar {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.miniapp-player-modal-avatar-fallback {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Anticva', serif;
+    font-size: clamp(2.5rem, 18vw, 4rem);
+    color: #3a2a1a;
+    background: rgba(139, 90, 43, 0.25);
+}
+
+.miniapp-player-modal-rank-num {
+    font-family: 'Anticva', serif;
+    font-size: clamp(1.5rem, 8vw, 2.25rem);
+    font-weight: bold;
+    color: #d4af37;
+    line-height: 1;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8), 0 0 15px rgba(212, 175, 55, 0.35);
+}
+
+.miniapp-player-modal-rank-label {
+    font-family: 'Anticva', serif;
+    font-size: 0.95em;
+    color: #d4af37;
+    font-weight: bold;
+    line-height: 1;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8), 0 0 12px rgba(212, 175, 55, 0.3);
+}
+
+.miniapp-player-modal-right {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.miniapp-player-modal-name {
+    font-family: 'Anticva', serif;
+    font-size: clamp(1.38rem, 5.4vw, 1.74rem);
+    font-weight: bold;
+    color: #3a2a1a;
+    margin: 0 0 12px 0;
+    line-height: 1.2;
+    max-width: 100%;
+    text-transform: uppercase;
+    text-align: center;
+}
+
+.miniapp-player-modal-pills-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    width: 100%;
+}
+
+.miniapp-player-modal-pill {
+    display: inline-block;
+    padding: calc(8px * 0.85) 18px;
+    border-radius: 999px;
+    font-family: 'Noto Sans', sans-serif;
+    font-size: 0.95em;
+    font-weight: 800;
+}
+
+.miniapp-player-modal-pill-round,
+.miniapp-player-modal-pill-game {
+    background: #d8e8d0;
+    color: #1d5a28;
+}
+
+.miniapp-player-modal-pill-round.negative,
+.miniapp-player-modal-pill-game.negative {
+    background: #f0d4d4;
+    color: #721c24;
+}
+
+.miniapp-player-modal-money {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 14px;
+    line-height: 1.15;
+    width: 100%;
+}
+
+/* Как .capitalization-value в карточке под шапкой (.portfolio-character-card .capitalization-value) */
+.miniapp-player-modal-money-value {
+    font-family: 'Noto Sans', sans-serif;
+    font-size: 1.5em;
+    font-weight: normal;
+    color: #d4af37;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8), 0 0 15px rgba(212, 175, 55, 0.3);
+}
+
+/* Как .capitalization-label («монет») в шапке */
+.miniapp-player-modal-money-suffix {
+    font-family: 'Noto Sans', sans-serif;
+    font-size: 0.65em;
+    font-weight: normal;
+    color: #c9a961;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+/* Как .building-name в блоке «мои объекты» */
+.miniapp-player-modal-owns-title {
+    font-family: 'Noto Sans', sans-serif;
+    font-size: 0.65em;
+    font-weight: bold;
+    color: #3a2a1a;
+    margin-bottom: 8px;
+    width: 100%;
+    text-align: center;
+}
+
+.miniapp-player-modal-buildings-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    align-self: stretch;
+    width: 100%;
+    text-align: left;
+}
+
+.miniapp-player-modal-buildings-list li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(80, 55, 40, 0.25);
+}
+
+.miniapp-player-modal-buildings-list li:last-child {
+    border-bottom: none;
+}
+
+/* Как .portfolio-card .buildings-list .portfolio-building-row .building-icon */
+.miniapp-player-modal-building-icon {
+    width: 29px;
+    height: 29px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+/* Как .building-name в «мои объекты» */
+.miniapp-player-modal-building-name {
+    flex: 1;
+    min-width: 0;
+    font-family: 'Noto Sans', sans-serif;
+    font-weight: bold;
+    color: #3a2a1a;
+    font-size: 0.65em;
+}
+
+.miniapp-player-modal-buildings-list li.miniapp-player-modal-buildings-empty {
+    justify-content: center;
+    border: none;
+    font-family: 'Noto Sans', sans-serif;
+    font-size: 0.65em;
+    font-weight: 600;
+    color: #4a3a2a;
+}
+
+/* Как .building-status-pill в «мои объекты» */
+.miniapp-player-modal-buildings-list .building-status-pill {
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.65em;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+.miniapp-player-modal-buildings-list .building-status-pill.active {
+    background: rgba(40, 167, 69, 0.35);
+    color: #155724;
+}
+
+.miniapp-player-modal-buildings-list .building-status-pill.building {
+    background: rgba(255, 193, 7, 0.5);
+    color: #856404;
+}
+
+.miniapp-player-modal-buildings-list .building-status-pill.completed {
+    background: rgba(40, 167, 69, 0.35);
+    color: #155724;
+}
+
+.miniapp-player-modal-buildings-list .building-status-pill.for_sale,
+.miniapp-player-modal-buildings-list .building-status-pill.sold {
+    background: rgba(108, 117, 125, 0.4);
+    color: #383d41;
+}
+
 /* Resource Screen */
 .back-btn {
     background: rgba(139, 69, 19, 0.3);
@@ -922,6 +1798,89 @@ body::before {
     margin-bottom: 15px;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
     transition: all 0.3s ease;
+}
+/* Карточка ресурса: кнопка и название в прямоугольниках одного стиля */
+#resource-screen .section {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 0 12px;
+}
+#resource-screen .section h2 {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    text-align: left;
+    line-height: 1.2;
+    display: flex;
+    align-items: center;
+    /* Прямоугольник как у кнопки "Назад", тот же шрифт и размер */
+    background: rgba(139, 69, 19, 0.3);
+    border: 2px solid #8b4513;
+    border-radius: 8px;
+    padding: 10px 20px;
+    color: #d4af37;
+    font-size: 0.65em;
+    font-weight: bold;
+    font-family: inherit;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+    box-sizing: border-box;
+}
+#resource-screen .resource-screen-content {
+    flex-basis: 100%;
+}
+#resource-screen .resource-screen-image-container {
+    padding-top: 0;
+    padding-bottom: 0;
+}
+#resource-screen .resource-screen-content {
+    gap: 0;
+}
+#resource-screen .resource-screen-stats {
+    margin-top: 0;
+}
+/* Прямоугольник текущей цены — как шапка, высота как у кнопки «Назад» */
+#resource-screen .resource-screen-stat-item {
+    background: linear-gradient(135deg, rgba(222, 184, 135, 0.25) 0%, rgba(205, 180, 150, 0.25) 100%);
+    border: 1px solid rgba(139, 69, 19, 0.4);
+    border-radius: 12px;
+    backdrop-filter: blur(8px);
+    height: 38px;
+    min-height: 38px;
+    padding: 0 15px;
+    align-items: center;
+    box-sizing: border-box;
+}
+#resource-screen .resource-screen-chart-container {
+    margin-top: 20px;
+}
+#resource-screen .resource-screen-available {
+    margin-top: 20px;
+    background: linear-gradient(135deg, rgba(222, 184, 135, 0.25) 0%, rgba(205, 180, 150, 0.25) 100%);
+    border: 1px solid rgba(139, 69, 19, 0.4);
+    border-radius: 12px;
+    backdrop-filter: blur(8px);
+    height: 38px;
+    min-height: 38px;
+    padding: 0 15px;
+    align-items: center;
+    box-sizing: border-box;
+}
+#resource-screen .resource-screen-actions {
+    margin-top: 20px;
+}
+#resource-screen .back-btn {
+    font-size: 0.65em;
+    font-weight: bold;
+    flex-shrink: 0;
+    margin-bottom: 0;
+    height: 38px;
+    min-height: 38px;
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
 }
 
 .back-btn:hover {
@@ -940,14 +1899,13 @@ body::before {
     justify-content: center;
     align-items: center;
     padding: 20px;
-    background: rgba(139, 69, 19, 0.1);
-    border: 2px solid #8b4513;
-    border-radius: 12px;
+    background: transparent;
+    border: none;
 }
 
 .resource-screen-image {
-    max-width: 200px;
-    max-height: 200px;
+    max-width: 264px;
+    max-height: 264px;
     width: auto;
     height: auto;
 }
@@ -969,13 +1927,14 @@ body::before {
 }
 
 .resource-screen-stat-label {
-    font-size: 1.125em;
+    font-size: 0.65em;
     color: #3a2a1a;
     font-weight: bold;
 }
 
 .resource-screen-stat-value {
-    font-size: 1.5em;
+    font-family: 'Noto Sans', sans-serif;
+    font-size: 1em;
     font-weight: bold;
     color: #d4af37;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
@@ -984,6 +1943,45 @@ body::before {
 .resource-screen-changes {
     display: flex;
     gap: 10px;
+}
+
+/* В карточке ресурса: только цифры, стиль как доходность в Портфеле */
+#resource-screen .resource-screen-change-label {
+    display: none;
+}
+#resource-screen .resource-screen-changes {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    margin: 0;
+}
+#resource-screen .resource-screen-change-box {
+    flex: 1;
+    min-width: 0;
+    padding: 5px 12px;
+    text-align: center;
+    border-radius: 12px;
+    border: 1px solid rgba(139, 69, 19, 0.4);
+    background: linear-gradient(135deg, rgba(222, 184, 135, 0.25) 0%, rgba(205, 180, 150, 0.25) 100%);
+    color: #3a2a1a;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+#resource-screen .resource-screen-change-box.positive {
+    background: rgba(40, 167, 69, 0.3);
+    border-color: #0a3d0a;
+}
+#resource-screen .resource-screen-change-box.positive .resource-screen-change-value {
+    color: #0a3d0a;
+}
+#resource-screen .resource-screen-change-box.negative {
+    background: rgba(220, 53, 69, 0.2);
+    border-color: #3d1518;
+}
+#resource-screen .resource-screen-change-box.negative .resource-screen-change-value {
+    color: #3d1518;
 }
 
 .resource-screen-change-box {
@@ -1008,12 +2006,12 @@ body::before {
 }
 
 .resource-screen-change-label {
-    font-size: 0.875em;
+    font-size: 0.65em;
     color: #3a2a1a;
 }
 
 .resource-screen-change-value {
-    font-size: 1.25em;
+    font-size: 0.65em;
     font-weight: bold;
     color: #1a5a1a;
 }
@@ -1026,52 +2024,6 @@ body::before {
     color: #3a0f0f;
 }
 
-.resource-screen-indicators {
-    display: flex;
-    gap: 10px;
-}
-
-.resource-screen-indicator-item {
-    flex: 1;
-    background: rgba(139, 69, 19, 0.3);
-    border: 1px solid #8b4513;
-    border-radius: 6px;
-    padding: 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-}
-
-.resource-screen-indicator-item.positive {
-    background: rgba(40, 167, 69, 0.3);
-    border-color: #28a745;
-}
-
-.resource-screen-indicator-item.negative {
-    background: rgba(94, 33, 41, 0.2);
-    border-color: #5E2129;
-}
-
-.resource-screen-indicator-label {
-    font-size: 0.875em;
-    color: #3a2a1a;
-}
-
-.resource-screen-indicator-value {
-    font-size: 1em;
-    font-weight: bold;
-    text-align: center;
-    color: #1a5a1a;
-}
-
-.resource-screen-indicator-item.positive .resource-screen-indicator-value {
-    color: #1a5a1a;
-}
-
-.resource-screen-indicator-item.negative .resource-screen-indicator-value {
-    color: #3a0f0f;
-}
-
 .resource-screen-chart-container {
     padding: 15px;
     background: rgba(255, 255, 255, 0.3);
@@ -1080,7 +2032,8 @@ body::before {
 }
 
 .resource-screen-chart-title {
-    font-size: 1.25em;
+    font-size: 0.65em;
+    font-weight: bold;
     color: #3a2a1a;
     margin-bottom: 15px;
     text-align: center;
@@ -1104,12 +2057,13 @@ body::before {
 }
 
 .resource-screen-available-label {
-    font-size: 1em;
+    font-size: 0.65em;
+    font-weight: bold;
     color: #3a2a1a;
 }
 
 .resource-screen-available-value {
-    font-size: 1.25em;
+    font-size: 1em;
     font-weight: bold;
     color: #3a2a1a;
 }
@@ -1124,7 +2078,7 @@ body::before {
     padding: 15px 20px;
     border: 2px solid #8b4513;
     border-radius: 8px;
-    font-size: 1.125em;
+    font-size: 0.65em;
     font-weight: bold;
     cursor: pointer;
     color: #ffffff;
@@ -1206,6 +2160,7 @@ body::before {
 
 .buy-resource-price-value,
 .sell-resource-price-value {
+    font-family: 'Noto Sans', sans-serif;
     font-size: 1.5em;
     font-weight: bold;
     color: #d4af37;
@@ -1237,6 +2192,7 @@ body::before {
 
 .buy-resource-available-value,
 .sell-resource-available-value {
+    font-family: 'Noto Sans', sans-serif;
     font-size: 1.25em;
     font-weight: bold;
     color: #3a2a1a;
@@ -1262,6 +2218,7 @@ body::before {
 
 .buy-resource-money-value,
 .sell-resource-money-value {
+    font-family: 'Noto Sans', sans-serif;
     font-size: 1.25em;
     font-weight: bold;
     color: #d4af37;
@@ -1358,6 +2315,7 @@ body::before {
 
 .buy-resource-total-value,
 .sell-resource-total-value {
+    font-family: 'Noto Sans', sans-serif;
     font-size: 1.875em;
     font-weight: bold;
     color: #d4af37;
@@ -1399,6 +2357,288 @@ body::before {
 
 .confirm-sell-btn:hover {
     background: #4a1a20;
+}
+
+/* Buy Resource Screen: шапка в одну строку, без картинки, прямоугольник под заголовком */
+#buy-resource-screen .section {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 0 12px;
+}
+#buy-resource-screen .section .buy-resource-content {
+    margin-top: 14px;
+}
+#buy-resource-screen .section h2 {
+    font-size: 0.65em;
+    font-weight: bold;
+    font-family: inherit;
+    border-bottom: none;
+    padding-bottom: 0;
+    margin: 0;
+    flex: 1;
+    min-width: 0;
+    text-align: left;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    /* Прямоугольник как у кнопки "Назад", та же высота */
+    background: rgba(139, 69, 19, 0.3);
+    border: 2px solid #8b4513;
+    border-radius: 8px;
+    padding: 0 20px;
+    min-height: 38px;
+    height: 38px;
+    color: #d4af37;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+#buy-resource-screen .buy-resource-content {
+    flex-basis: 100%;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+#buy-resource-screen .buy-resource-info {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+#buy-resource-screen .buy-resource-price,
+#buy-resource-screen .buy-resource-available,
+#buy-resource-screen .buy-resource-money,
+#buy-resource-screen .buy-resource-quantity,
+#buy-resource-screen .buy-resource-total,
+#buy-resource-screen .buy-resource-quantity-controls {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+/* Высота прямоугольников как у кнопки «Назад» (38px) */
+#buy-resource-screen .buy-resource-price,
+#buy-resource-screen .buy-resource-available,
+#buy-resource-screen .buy-resource-money,
+#buy-resource-screen .buy-resource-total {
+    height: 38px;
+    min-height: 38px;
+    padding: 0 15px;
+    align-items: center;
+}
+#buy-resource-screen .confirm-buy-btn {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+#buy-resource-screen .buy-resource-image-container {
+    display: none;
+}
+#buy-resource-screen .back-btn {
+    font-size: 0.65em;
+    font-weight: bold;
+    height: 38px;
+    min-height: 38px;
+    padding: 0 20px;
+    margin-bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+}
+#buy-resource-screen .buy-resource-price-label {
+    font-size: 0.65em;
+    font-weight: bold;
+}
+#buy-resource-screen .buy-resource-price-value {
+    font-size: 1em;
+    margin-left: auto;
+}
+#buy-resource-screen .buy-resource-price-currency {
+    display: none;
+}
+#buy-resource-screen .buy-resource-available-label {
+    font-size: 0.65em;
+    font-weight: bold;
+}
+#buy-resource-screen .buy-resource-available-value {
+    font-size: 1em;
+}
+#buy-resource-screen .buy-resource-money-label {
+    font-size: 0.65em;
+    font-weight: bold;
+}
+#buy-resource-screen .buy-resource-money-value {
+    font-size: 1em;
+}
+#buy-resource-screen .buy-resource-quantity-label {
+    font-size: 0.65em;
+    font-weight: bold;
+}
+#buy-resource-screen .quantity-btn {
+    font-size: 1em;
+}
+#buy-resource-screen .quantity-input {
+    font-size: 1em;
+}
+#buy-resource-screen .buy-resource-total-label {
+    font-size: 0.65em;
+    font-weight: bold;
+}
+#buy-resource-screen .buy-resource-total {
+    background: linear-gradient(135deg, rgba(222, 184, 135, 0.25) 0%, rgba(205, 180, 150, 0.25) 100%);
+    border: 1px solid rgba(139, 69, 19, 0.4);
+    backdrop-filter: blur(8px);
+}
+#buy-resource-screen .buy-resource-total-value {
+    font-size: 1em;
+    margin-left: auto;
+}
+#buy-resource-screen .buy-resource-total-currency {
+    display: none;
+}
+#buy-resource-screen .confirm-buy-btn {
+    font-size: 0.65em;
+    font-weight: bold;
+}
+
+/* Sell Resource Screen: по аналогии с экраном покупки */
+#sell-resource-screen .section {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 0 12px;
+}
+#sell-resource-screen .section .sell-resource-content {
+    margin-top: 14px;
+}
+#sell-resource-screen .section h2 {
+    font-size: 0.65em;
+    font-weight: bold;
+    font-family: inherit;
+    border-bottom: none;
+    padding-bottom: 0;
+    margin: 0;
+    flex: 1;
+    min-width: 0;
+    text-align: left;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    background: rgba(139, 69, 19, 0.3);
+    border: 2px solid #8b4513;
+    border-radius: 8px;
+    padding: 0 20px;
+    min-height: 38px;
+    height: 38px;
+    color: #d4af37;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+#sell-resource-screen .sell-resource-content {
+    flex-basis: 100%;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+#sell-resource-screen .sell-resource-info {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+#sell-resource-screen .sell-resource-price,
+#sell-resource-screen .sell-resource-available,
+#sell-resource-screen .sell-resource-money,
+#sell-resource-screen .sell-resource-quantity,
+#sell-resource-screen .sell-resource-total,
+#sell-resource-screen .sell-resource-quantity-controls {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+#sell-resource-screen .sell-resource-price,
+#sell-resource-screen .sell-resource-available,
+#sell-resource-screen .sell-resource-money,
+#sell-resource-screen .sell-resource-total {
+    height: 38px;
+    min-height: 38px;
+    padding: 0 15px;
+    align-items: center;
+}
+#sell-resource-screen .confirm-sell-btn {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+#sell-resource-screen .sell-resource-image-container {
+    display: none;
+}
+#sell-resource-screen .back-btn {
+    font-size: 0.65em;
+    font-weight: bold;
+    height: 38px;
+    min-height: 38px;
+    padding: 0 20px;
+    margin-bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+}
+#sell-resource-screen .sell-resource-price-label {
+    font-size: 0.65em;
+    font-weight: bold;
+}
+#sell-resource-screen .sell-resource-price-value {
+    font-size: 1em;
+    margin-left: auto;
+}
+#sell-resource-screen .sell-resource-price-currency {
+    display: none;
+}
+#sell-resource-screen .sell-resource-available-label {
+    font-size: 0.65em;
+    font-weight: bold;
+}
+#sell-resource-screen .sell-resource-available-value {
+    font-size: 1em;
+}
+#sell-resource-screen .sell-resource-money-label {
+    font-size: 0.65em;
+    font-weight: bold;
+}
+#sell-resource-screen .sell-resource-money-value {
+    font-size: 1em;
+}
+#sell-resource-screen .sell-resource-quantity-label {
+    font-size: 0.65em;
+    font-weight: bold;
+}
+#sell-resource-screen .quantity-btn,
+#sell-resource-screen .quantity-input {
+    font-size: 1em;
+}
+#sell-resource-screen .sell-resource-total-label {
+    font-size: 0.65em;
+    font-weight: bold;
+}
+#sell-resource-screen .sell-resource-total {
+    background: linear-gradient(135deg, rgba(222, 184, 135, 0.25) 0%, rgba(205, 180, 150, 0.25) 100%);
+    border: 1px solid rgba(139, 69, 19, 0.4);
+    backdrop-filter: blur(8px);
+}
+#sell-resource-screen .sell-resource-total-value {
+    font-size: 1em;
+    margin-left: auto;
+}
+#sell-resource-screen .sell-resource-total-currency {
+    display: none;
+}
+#sell-resource-screen .confirm-sell-btn {
+    font-size: 0.65em;
+    font-weight: bold;
 }
 
 /* Portfolio Building Screen */
@@ -1618,6 +2858,169 @@ body::before {
     background: #4a1a20;
 }
 
+/* Portfolio Building Screen: по примеру карточки объекта на бирже */
+#portfolio-building-screen .section {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 0 12px;
+}
+#portfolio-building-screen .section .portfolio-building-content {
+    flex-basis: 100%;
+    margin-top: 14px;
+    gap: 0;
+}
+#portfolio-building-screen .section h2 {
+    font-size: 0.65em;
+    font-weight: bold;
+    font-family: inherit;
+    border-bottom: none;
+    padding-bottom: 0;
+    margin: 0;
+    flex: 1;
+    min-width: 0;
+    text-align: left;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    background: rgba(139, 69, 19, 0.3);
+    border: 2px solid #8b4513;
+    border-radius: 8px;
+    padding: 0 20px;
+    min-height: 38px;
+    height: 38px;
+    color: #d4af37;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+#portfolio-building-screen .back-btn {
+    font-size: 0.65em;
+    font-weight: bold;
+    height: 38px;
+    min-height: 38px;
+    padding: 0 20px;
+    margin-bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+}
+#portfolio-building-screen .portfolio-building-image-container {
+    padding: 0;
+    margin-bottom: 0;
+    background: transparent;
+    border: none;
+}
+#portfolio-building-screen .portfolio-building-image {
+    max-width: 264px;
+    max-height: 264px;
+}
+#portfolio-building-screen .portfolio-building-stats {
+    margin-top: 0;
+}
+#portfolio-building-screen .portfolio-building-stat-item {
+    height: 38px;
+    min-height: 38px;
+    padding: 0 15px;
+    align-items: center;
+    box-sizing: border-box;
+}
+#portfolio-building-screen .portfolio-building-stat-label {
+    font-size: 0.65em;
+    font-weight: bold;
+}
+#portfolio-building-screen .portfolio-building-stat-value {
+    font-size: 1em;
+}
+#portfolio-building-screen .portfolio-building-stat-currency {
+    display: none;
+}
+#portfolio-building-screen .portfolio-building-changes {
+    margin-top: 0;
+}
+#portfolio-building-screen .portfolio-building-income-label {
+    font-size: 0.65em;
+    font-weight: bold;
+}
+#portfolio-building-screen .portfolio-building-income-value {
+    font-size: 0.65em;
+    font-weight: bold;
+}
+#portfolio-building-screen .portfolio-building-income {
+    margin-top: 0;
+}
+#portfolio-building-screen .portfolio-building-actions {
+    margin-top: 0;
+}
+#portfolio-building-screen .portfolio-building-sell-btn {
+    font-size: 0.65em;
+    font-weight: bold;
+}
+/* Статус объекта — как на странице портфеля (building-status-pill) */
+#portfolio-building-screen .portfolio-building-status {
+    font-size: 0.65em;
+    font-weight: bold;
+    padding: 4px 10px;
+    border-radius: 999px;
+}
+#portfolio-building-screen .portfolio-building-status.building {
+    background: rgba(255, 193, 7, 0.5);
+    color: #856404;
+}
+#portfolio-building-screen .portfolio-building-status.completed {
+    background: rgba(40, 167, 69, 0.35);
+    color: #155724;
+}
+#portfolio-building-screen .portfolio-building-status.active {
+    background: rgba(40, 167, 69, 0.35);
+    color: #155724;
+}
+#portfolio-building-screen .portfolio-building-status.for_sale {
+    background: rgba(108, 117, 125, 0.4);
+    color: #383d41;
+}
+/* Прямоугольники прироста % — без подписей «Раунд»/«Игра», как в карточке ресурса на бирже */
+#portfolio-building-screen .portfolio-building-change-label {
+    display: none;
+}
+#portfolio-building-screen .portfolio-building-changes {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    margin: 0;
+}
+#portfolio-building-screen .portfolio-building-change-box {
+    flex: 1;
+    min-width: 0;
+    padding: 5px 12px;
+    text-align: center;
+    border-radius: 12px;
+    border: 1px solid rgba(139, 69, 19, 0.4);
+    background: linear-gradient(135deg, rgba(222, 184, 135, 0.25) 0%, rgba(205, 180, 150, 0.25) 100%);
+    color: #3a2a1a;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+#portfolio-building-screen .portfolio-building-change-box.positive {
+    background: rgba(40, 167, 69, 0.3);
+    border-color: #0a3d0a;
+}
+#portfolio-building-screen .portfolio-building-change-box.positive .portfolio-building-change-value {
+    color: #0a3d0a;
+}
+#portfolio-building-screen .portfolio-building-change-box.negative {
+    background: rgba(220, 53, 69, 0.2);
+    border-color: #3d1518;
+}
+#portfolio-building-screen .portfolio-building-change-box.negative .portfolio-building-change-value {
+    color: #3d1518;
+}
+#portfolio-building-screen .portfolio-building-change-value {
+    font-size: 1em;
+}
+
 /* Market Building Screen */
 .market-building-content {
     display: flex;
@@ -1668,6 +3071,7 @@ body::before {
 }
 
 .market-building-count-value {
+    font-family: 'Noto Sans', sans-serif;
     font-size: 1.5em;
     font-weight: bold;
     color: #d4af37;
@@ -1873,7 +3277,330 @@ body::before {
     background: #4a1a20;
 }
 
-/* Build Building Screen */
+/* Market Building Screen: шапка в одну строку, прямоугольник под названием, картинка без отступов */
+#market-building-screen .section {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0 12px;
+}
+#market-building-screen .section .market-building-content {
+    flex-basis: 100%;
+    width: 100%;
+    min-width: 0;
+    margin-top: 14px;
+    gap: 0;
+}
+#market-building-screen .section h2 {
+    font-size: 0.65em;
+    font-weight: bold;
+    font-family: inherit;
+    border-bottom: none;
+    padding-bottom: 0;
+    margin: 0;
+    flex: 1;
+    min-width: 0;
+    flex-shrink: 1;
+    text-align: left;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    background: rgba(139, 69, 19, 0.3);
+    border: 2px solid #8b4513;
+    border-radius: 8px;
+    padding: 0 20px;
+    min-height: 38px;
+    height: 38px;
+    color: #d4af37;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+#market-building-screen .back-btn {
+    font-size: 0.65em;
+    font-weight: bold;
+    height: 38px;
+    min-height: 38px;
+    padding: 0 20px;
+    margin-bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    flex-shrink: 0;
+}
+#market-building-screen .market-building-image-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    margin: 0 0 12px 0;
+    order: 0;
+}
+#market-building-screen .market-building-image {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    max-height: 276px; /* было 240px, +15% */
+    height: auto;
+    object-fit: contain;
+    object-position: center top;
+    border-radius: 8px;
+}
+#market-building-screen .market-building-stats {
+    margin-top: 0;
+    min-width: 0;
+    width: 100%;
+}
+#market-building-screen .market-building-cost-resources-item,
+#market-building-screen .market-building-income-item {
+    min-width: 0;
+}
+#market-building-screen .market-building-cost-resources-list,
+#market-building-screen .market-building-income-content {
+    overflow-wrap: break-word;
+}
+#market-building-screen .market-building-actions {
+    width: 100%;
+    min-width: 0;
+}
+#market-building-screen .market-building-owners {
+    width: 100%;
+    min-width: 0;
+}
+/* Прямоугольники «Построено объектов», «Игроков владеют», «Оценка в монетах», «У вас есть» — высота как кнопка «Назад» */
+#market-building-screen .market-building-stat-item:not(.market-building-cost-resources-item):not(.market-building-base-resource-item):not(.market-building-income-item) {
+    height: 38px;
+    min-height: 38px;
+    padding: 0 15px;
+    align-items: center;
+    box-sizing: border-box;
+}
+#market-building-screen .market-building-stat-label {
+    font-size: 0.65em;
+    font-weight: bold;
+}
+#market-building-screen .market-building-stat-value {
+    font-size: 1em;
+}
+#market-building-screen .market-building-count-value {
+    font-size: 1em;
+}
+#market-building-screen .market-building-stat-currency {
+    display: none;
+}
+#market-building-screen .market-building-cost-resources-label {
+    font-size: 0.65em;
+    font-weight: bold;
+}
+#market-building-screen .market-building-cost-resource-item {
+    font-size: 0.65em;
+    font-weight: bold;
+}
+#market-building-screen .market-building-cost-coins-value {
+    font-size: 1em;
+}
+#market-building-screen .market-building-base-resource-item {
+    display: none;
+}
+#market-building-screen .market-building-income-label {
+    font-size: 0.65em;
+    font-weight: bold;
+}
+#market-building-screen .market-building-income-value {
+    font-size: 0.65em;
+    font-weight: bold;
+}
+#market-building-screen .market-building-owners-title {
+    font-size: 0.65em;
+    font-weight: bold;
+}
+#market-building-screen .market-building-no-owners {
+    font-size: 0.65em;
+    text-align: center;
+    color: #c9a961;
+    padding: 10px;
+}
+#market-building-screen .market-building-owner-name {
+    font-size: 0.65em;
+    font-weight: bold;
+}
+#market-building-screen .market-building-owner-count {
+    font-size: 0.65em;
+    font-weight: bold;
+}
+#market-building-screen .market-building-action-btn {
+    font-size: 0.65em;
+    font-weight: bold;
+}
+
+/* Build Building Screen: по аналогии с карточкой объекта на бирже (#market-building-screen) */
+#build-building-screen .section {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0 12px;
+}
+#build-building-screen .section .build-building-content {
+    flex-basis: 100%;
+    width: 100%;
+    min-width: 0;
+    margin-top: 14px;
+    gap: 0;
+}
+#build-building-screen .section h2 {
+    font-size: 0.65em;
+    font-weight: bold;
+    font-family: inherit;
+    border-bottom: none;
+    padding-bottom: 0;
+    margin: 0;
+    flex: 1;
+    min-width: 0;
+    flex-shrink: 1;
+    text-align: left;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    background: rgba(139, 69, 19, 0.3);
+    border: 2px solid #8b4513;
+    border-radius: 8px;
+    padding: 0 20px;
+    min-height: 38px;
+    height: 38px;
+    color: #d4af37;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+#build-building-screen .back-btn {
+    font-size: 0.65em;
+    font-weight: bold;
+    height: 38px;
+    min-height: 38px;
+    padding: 0 20px;
+    margin-bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    flex-shrink: 0;
+}
+#build-building-screen .build-building-image-container {
+    display: none;
+}
+#build-building-screen .build-building-info {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+    width: 100%;
+}
+#build-building-screen .build-building-available {
+    padding: 12px 15px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    background: rgba(139, 69, 19, 0.2);
+    border: 2px solid #8b4513;
+    border-radius: 8px;
+}
+#build-building-screen .build-building-available-label {
+    font-size: 0.65em;
+    font-weight: bold;
+    margin-bottom: 0;
+}
+#build-building-screen .build-building-available-resources-list {
+    margin: 0;
+    padding-left: 20px;
+}
+#build-building-screen .build-building-available-resource-item {
+    font-size: 0.65em;
+    font-weight: bold;
+}
+#build-building-screen .build-building-buy-all-btn,
+#portfolio-screen .portfolio-round-events-block .build-building-buy-all-btn,
+#rules-screen .build-building-buy-all-btn {
+    width: 100%;
+    padding: 0 20px;
+    height: 38px;
+    min-height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    background: linear-gradient(135deg, rgba(222, 184, 135, 0.25) 0%, rgba(205, 180, 150, 0.25) 100%);
+    border: 2px solid #8b4513;
+    border-radius: 8px;
+    color: #d4af37;
+    font-size: 0.65em;
+    font-weight: bold;
+    font-family: inherit;
+    cursor: pointer;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+    transition: all 0.3s ease;
+}
+#build-building-screen .build-building-buy-all-btn:hover,
+#portfolio-screen .portfolio-round-events-block .build-building-buy-all-btn:hover,
+#rules-screen .build-building-buy-all-btn:hover {
+    background: linear-gradient(135deg, rgba(222, 184, 135, 0.4) 0%, rgba(205, 180, 150, 0.4) 100%);
+}
+/* Кнопки правил — те же цвета, что «Назад» на карточке ресурса (#resource-screen .back-btn) */
+#rules-screen .rules-back-btn.build-building-buy-all-btn,
+#rules-screen .rules-close-btn.build-building-buy-all-btn {
+    background: rgba(139, 69, 19, 0.3);
+    border: 2px solid #8b4513;
+    border-radius: 8px;
+    color: #d4af37;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+#rules-screen .rules-back-btn.build-building-buy-all-btn:hover,
+#rules-screen .rules-close-btn.build-building-buy-all-btn:hover {
+    background: rgba(139, 69, 19, 0.5);
+}
+#rules-screen .rules-back-btn.build-building-buy-all-btn:hover {
+    transform: translateX(-3px);
+}
+#rules-screen .rules-close-btn.build-building-buy-all-btn:hover {
+    transform: none;
+}
+#rules-screen .rules-back-btn.build-building-buy-all-btn {
+    width: auto;
+}
+#portfolio-screen .portfolio-round-events-block {
+    margin: 10px 0;
+}
+/* Блок «Количество» — как на странице покупки ресурса (buy-resource-screen) */
+#build-building-screen .build-building-quantity {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+#build-building-screen .build-building-quantity-label {
+    font-size: 0.65em;
+    font-weight: bold;
+}
+#build-building-screen .build-building-quantity-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+#build-building-screen .quantity-input {
+    font-size: 1em;
+}
+#build-building-screen .quantity-btn {
+    font-size: 1em;
+}
+#build-building-screen .confirm-build-btn {
+    font-size: 0.65em;
+    font-weight: bold;
+}
+
+/* Build Building Screen - базовые стили */
 .build-building-content {
     display: flex;
     flex-direction: column;
@@ -2106,6 +3833,7 @@ body::before {
 }
 
 .sell-building-price-value {
+    font-family: 'Noto Sans', sans-serif;
     font-size: 1.25em;
     font-weight: bold;
     color: #3a2a1a;
@@ -2204,6 +3932,136 @@ body::before {
     background: #4a1a20;
 }
 
+/* Sell Building Screen: по аналогии с build-building-screen */
+#sell-building-screen .section {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0 12px;
+}
+#sell-building-screen .section .sell-building-content {
+    flex-basis: 100%;
+    width: 100%;
+    min-width: 0;
+    margin-top: 14px;
+    gap: 0;
+}
+#sell-building-screen .section h2 {
+    font-size: 0.65em;
+    font-weight: bold;
+    font-family: inherit;
+    border-bottom: none;
+    padding-bottom: 0;
+    margin: 0;
+    flex: 1;
+    min-width: 0;
+    flex-shrink: 1;
+    text-align: left;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    background: rgba(139, 69, 19, 0.3);
+    border: 2px solid #8b4513;
+    border-radius: 8px;
+    padding: 0 20px;
+    min-height: 38px;
+    height: 38px;
+    color: #d4af37;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+#sell-building-screen .back-btn {
+    font-size: 0.65em;
+    font-weight: bold;
+    height: 38px;
+    min-height: 38px;
+    padding: 0 20px;
+    margin-bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    flex-shrink: 0;
+}
+#sell-building-screen .sell-building-image-container {
+    display: none;
+}
+#sell-building-screen .sell-building-info {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+    width: 100%;
+}
+#sell-building-screen .sell-building-price,
+#sell-building-screen .sell-building-available {
+    height: 38px;
+    min-height: 38px;
+    padding: 0 15px;
+    align-items: center;
+    box-sizing: border-box;
+    background: rgba(139, 69, 19, 0.2);
+    border: 2px solid #8b4513;
+    border-radius: 8px;
+}
+#sell-building-screen .sell-building-price-label,
+#sell-building-screen .sell-building-available-label {
+    font-size: 0.65em;
+    font-weight: bold;
+}
+#sell-building-screen .sell-building-price-value,
+#sell-building-screen .sell-building-available-value {
+    font-size: 1em;
+}
+#sell-building-screen .sell-building-price-currency {
+    display: none;
+}
+#sell-building-screen .sell-building-quantity {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+#sell-building-screen .sell-building-quantity-label {
+    font-size: 0.65em;
+    font-weight: bold;
+}
+#sell-building-screen .sell-building-quantity-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+#sell-building-screen .sell-building-total {
+    height: 38px;
+    min-height: 38px;
+    padding: 0 15px;
+    align-items: center;
+    box-sizing: border-box;
+}
+#sell-building-screen .sell-building-total-label {
+    font-size: 0.65em;
+    font-weight: bold;
+}
+#sell-building-screen .sell-building-total-value {
+    font-size: 1em;
+}
+#sell-building-screen .sell-building-total-currency {
+    display: none;
+}
+#sell-building-screen .quantity-input,
+#sell-building-screen .quantity-btn {
+    font-size: 1em;
+}
+#sell-building-screen .confirm-sell-building-btn {
+    font-size: 0.65em;
+    font-weight: bold;
+}
+
 /* Bottom Navigation */
 .bottom-nav {
     position: fixed;
@@ -2212,23 +4070,21 @@ body::before {
     transform: translateX(-50%);
     max-width: 500px;
     width: 90%;
-    background: linear-gradient(135deg, rgba(139, 69, 19, 0.3) 0%, rgba(101, 67, 33, 0.3) 100%);
-    border-top: 2px solid #8b4513;
-    border-left: 2px solid #8b4513;
-    border-right: 2px solid #8b4513;
+    background: rgba(50, 40, 30, 0.92);
+    border-top: 2px solid rgba(139, 69, 19, 0.5);
     border-radius: 15px 15px 0 0;
     display: flex;
     justify-content: space-around;
     padding: 10px 0;
     z-index: 10000;
-    backdrop-filter: blur(15px);
+    backdrop-filter: blur(12px);
     box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.3);
 }
 
 .nav-btn {
     background: transparent;
     border: none;
-    color: #c9a961;
+    color: #D3B035;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -2236,28 +4092,152 @@ body::before {
     padding: 8px 15px;
     cursor: pointer;
     transition: all 0.3s;
-    border-radius: 8px;
+    border-radius: 10px;
 }
 
 .nav-btn.active {
-    background: rgba(212, 175, 55, 0.2);
-    color: #d4af37;
+    background: #D3B035;
+    color: #1a1510;
+    transform: scale(0.9);
 }
 
 .nav-btn:active {
     transform: scale(0.95);
 }
+.nav-btn.active:active {
+    transform: scale(0.9);
+}
 
 .nav-icon {
-    width: 54px;
-    height: 54px;
+    width: 34px;
+    height: 34px;
     object-fit: contain;
 }
 
 .nav-label {
-    font-size: 1.0625em;
-    font-weight: bold;
+    font-size: 0.95em;
+    font-weight: normal;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.nav-btn.active .nav-label {
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Заглушка экрана Настройки */
+.settings-change-game-btn {
+    display: block;
+    width: 100%;
+    margin: 15px 0 20px;
+    padding: 14px 16px;
+    font-family: 'Noto Sans', sans-serif;
+    font-size: 0.65em;
+    font-weight: bold;
+    color: #3a2a1a;
+    background: linear-gradient(135deg, rgba(222, 184, 135, 0.65) 0%, rgba(205, 180, 150, 0.65) 100%);
+    border: 2px solid #8b4513;
+    border-radius: 12px;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.2s, border-color 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+.settings-change-game-btn:hover {
+    background: linear-gradient(135deg, rgba(222, 184, 135, 0.85) 0%, rgba(205, 180, 150, 0.85) 100%);
+    border-color: #6b3410;
+}
+.settings-placeholder {
+    text-align: center;
+    color: rgba(92, 74, 50, 0.7);
+    padding: 20px;
+    font-size: 1em;
+}
+
+/* Rules Screen (из настроек): фон как у шапки с логотипом — .portfolio-header-card */
+#rules-screen {
+    overflow-y: auto;
+    min-height: 100%;
+    box-sizing: border-box;
+    background: linear-gradient(135deg, rgba(222, 184, 135, 0.25) 0%, rgba(205, 180, 150, 0.25) 100%);
+    backdrop-filter: blur(8px);
+}
+.rules-container {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 58px 18px 88px;
+    box-sizing: border-box;
+}
+.rules-container h1 {
+    font-family: 'Noto Sans', sans-serif;
+    font-size: 0.95em;
+    font-weight: bold;
+    color: #3a2a1a;
+    text-align: center;
+    margin: 14px 0 16px;
+    line-height: 1.35;
+}
+.rules-back-btn {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    z-index: 100;
+}
+.rules-content {
+    line-height: 1.5;
+    color: #3a2a1a;
+    text-align: left;
+}
+.rules-section {
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(58, 42, 26, 0.12);
+}
+.rules-section:last-of-type {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+.rules-section h2 {
+    font-family: 'Noto Sans', sans-serif;
+    font-size: 0.72em;
+    font-weight: bold;
+    color: #4a3628;
+    margin: 0 0 6px;
+    text-align: left;
+    line-height: 1.35;
+}
+.rules-section p,
+.rules-section ul {
+    font-family: 'Noto Sans', sans-serif;
+    font-size: 0.68em;
+    margin: 0 0 8px;
+    text-align: left;
+}
+.rules-section ul {
+    margin-left: 0;
+    margin-right: 0;
+    padding-left: 1.15em;
+    list-style-position: outside;
+}
+.rules-section li {
+    margin-bottom: 5px;
+    padding-left: 0.15em;
+}
+.rules-section p:last-child,
+.rules-section ul:last-child {
+    margin-bottom: 0;
+}
+.rules-footer {
+    margin: 18px auto 0;
+    padding-top: 4px;
+    text-align: center;
+    max-width: 100%;
+}
+.rules-close-btn {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
 }
 
 /* Container padding for bottom nav */
@@ -2287,12 +4267,21 @@ body::before {
 .resource-market-left {
     flex: 1;
     min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.resource-market-icon {
+    width: 29px;
+    height: 29px;
+    object-fit: contain;
+    flex-shrink: 0;
 }
 
 .resource-market-name {
     font-weight: bold;
     color: #3a2a1a;
-    font-size: 1.25em;
+    font-size: 0.65em;
 }
 
 .resource-market-right {
@@ -2329,7 +4318,8 @@ body::before {
 }
 
 .resource-market-change-value {
-    font-size: 1em;
+    font-family: 'Noto Sans', sans-serif;
+    font-size: 0.65em;
     font-weight: bold;
     color: #1a5a1a;
 }
@@ -2343,7 +4333,8 @@ body::before {
 }
 
 .resource-market-price {
-    font-size: 1.5em;
+    font-family: 'Noto Sans', sans-serif;
+    font-size: 1em;
     font-weight: bold;
     color: #d4af37;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
@@ -2357,52 +4348,73 @@ body::before {
 }
 
 .building-market-card {
-    background: rgba(139, 69, 19, 0.2);
+    position: relative;
     border: 2px solid #8b4513;
     border-radius: 8px;
-    padding: 10px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
+    padding: 0;
+    overflow: hidden;
     backdrop-filter: blur(3px);
     max-width: 100%;
+    min-height: 160px;
+    display: grid;
+    grid-template: minmax(160px, 1fr) / 1fr;
+    align-items: stretch;
 }
 
-.building-market-name {
-    font-weight: bold;
-    color: #3a2a1a;
-    font-size: 1.125em;
-    text-align: center;
+.building-market-name,
+.building-market-image,
+.building-market-stats {
+    grid-area: 1 / 1;
 }
 
 .building-market-image {
     width: 100%;
-    max-width: 180px;
-    height: auto;
-    object-fit: contain;
+    height: 100%;
+    min-height: 160px;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+    z-index: 0;
+    pointer-events: none;
+}
+
+.building-market-name {
+    z-index: 1;
+    align-self: start;
+    justify-self: stretch;
+    font-weight: bold;
+    font-size: 0.65em;
+    text-align: center;
+    color: #cdac7f;
+    padding: 8px 6px 12px;
+    background: linear-gradient(180deg, rgba(30, 18, 10, 0.78) 0%, rgba(30, 18, 10, 0.35) 70%, transparent 100%);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
 }
 
 .building-market-stats {
+    z-index: 1;
+    align-self: end;
+    justify-self: stretch;
     display: flex;
     flex-direction: row;
     align-items: center;
     justify-content: center;
     gap: 10px;
-    width: 100%;
+    padding: 10px 8px 8px;
+    background: linear-gradient(0deg, rgba(30, 18, 10, 0.82) 0%, rgba(30, 18, 10, 0.4) 65%, transparent 100%);
 }
 
 .building-market-count {
-    font-size: 1.875em;
+    font-size: 1em;
     font-weight: bold;
-    color: #3a2a1a;
-    text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.3);
+    color: #cdac7f;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
 }
 
 .building-market-percentage {
-    font-size: 1em;
-    color: #c9a961;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+    font-size: 0.65em;
+    color: #e8d4a8;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
 }
 
 /* Character Selection Screen */
@@ -2432,7 +4444,7 @@ body::before {
 
 .character-selection-content h2 {
     font-family: 'Stieglitz', serif;
-    font-size: 2.25em;
+    font-size: 1em;
     color: #d4af37;
     margin-bottom: 10px;
     text-align: center;
@@ -2443,7 +4455,7 @@ body::before {
     color: #3a2a1a;
     margin-bottom: 20px;
     text-align: center;
-    font-size: 1.125em;
+    font-size: 0.65em;
 }
 
 .character-selection-grid {
@@ -2453,6 +4465,31 @@ body::before {
     max-height: 60vh;
     overflow-y: auto;
     padding: 10px;
+}
+
+.character-selection-change-game-btn {
+    display: block;
+    margin: 20px auto 0;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #8b4513 0%, #a0522d 100%);
+    color: #fff;
+    font-size: 0.65em;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(139, 69, 19, 0.4);
+    transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+}
+
+.character-selection-change-game-btn:hover {
+    background: linear-gradient(135deg, #a0522d 0%, #b8653f 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(139, 69, 19, 0.6);
+}
+
+.character-selection-change-game-btn:active {
+    transform: translateY(0);
 }
 
 .character-card {
@@ -2496,7 +4533,7 @@ body::before {
 .character-card-name {
     font-weight: bold;
     color: #3a2a1a;
-    font-size: 0.875em;
+    font-size: 0.65em;
     text-align: center;
     line-height: 1.2;
 }
@@ -2507,10 +4544,11 @@ body::before {
     border: none;
     padding: 6px 12px;
     border-radius: 6px;
-    font-size: 0.875em;
+    font-size: 0.65em;
+    font-weight: bold;
     cursor: pointer;
     transition: background 0.2s;
-    font-family: 'Crimson Text', serif;
+    font-family: 'Noto Sans', sans-serif;
 }
 
 .character-card-select-btn:hover {
@@ -2565,7 +4603,7 @@ body::before {
 
 .character-confirm-name {
     font-family: 'Stieglitz', serif;
-    font-size: 1.75em;
+    font-size: 1em;
     color: #d4af37;
     margin-bottom: 15px;
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
@@ -2574,7 +4612,7 @@ body::before {
 .character-confirm-text {
     color: #3a2a1a;
     margin-bottom: 25px;
-    font-size: 1.125em;
+    font-size: 0.65em;
 }
 
 .character-confirm-buttons {
@@ -2587,10 +4625,10 @@ body::before {
     padding: 12px 24px;
     border: none;
     border-radius: 8px;
-    font-size: 1em;
+    font-size: 0.65em;
     cursor: pointer;
     transition: background 0.2s, transform 0.2s;
-    font-family: 'Crimson Text', serif;
+    font-family: 'Noto Sans', sans-serif;
     font-weight: bold;
 }
 
@@ -2612,4 +4650,152 @@ body::before {
 .character-confirm-ok:hover {
     background: #6ba045;
     transform: translateY(-2px);
+}
+
+/* Game Code Input Screen */
+.game-code-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(10px);
+}
+
+.game-code-content {
+    background: linear-gradient(135deg, rgba(222, 184, 135, 0.95) 0%, rgba(205, 180, 150, 0.95) 100%);
+    border: 3px solid #d4af37;
+    border-radius: 20px;
+    padding: 40px 30px;
+    max-width: 400px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(10px);
+}
+
+.game-code-header {
+    margin-bottom: 30px;
+}
+
+.game-code-logo {
+    width: 100px;
+    height: auto;
+    margin-bottom: 15px;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
+}
+
+.game-code-header h2 {
+    font-family: 'Stieglitz', serif;
+    font-size: 2em;
+    color: #d4af37;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8), 0 0 15px rgba(212, 175, 55, 0.3);
+    margin: 0;
+    letter-spacing: 1px;
+}
+
+.game-code-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.game-code-description {
+    color: #3a2a1a;
+    font-size: 1.125em;
+    margin: 0;
+}
+
+.game-code-input-container {
+    position: relative;
+}
+
+.game-code-input {
+    width: 100%;
+    padding: 20px;
+    font-size: 2em;
+    text-align: center;
+    border: 3px solid #8b4513;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.9);
+    color: #3a2a1a;
+    font-family: 'Noto Sans', sans-serif;
+    font-weight: bold;
+    letter-spacing: 8px;
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.game-code-input:focus {
+    outline: none;
+    border-color: #d4af37;
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.5);
+}
+
+.game-code-input::placeholder {
+    color: #8b4513;
+    opacity: 0.5;
+    letter-spacing: 4px;
+}
+
+.game-code-error {
+    color: #d32f2f;
+    font-size: 0.95em;
+    min-height: 20px;
+    padding: 8px;
+    background: rgba(211, 47, 47, 0.1);
+    border-radius: 6px;
+    border: 1px solid rgba(211, 47, 47, 0.3);
+}
+
+.game-code-submit,
+.game-code-change {
+    padding: 15px 30px;
+    border: none;
+    border-radius: 10px;
+    font-size: 1.125em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.3s, transform 0.2s, box-shadow 0.3s;
+    font-family: 'Noto Sans', sans-serif;
+    color: white;
+}
+
+.game-code-submit {
+    background: linear-gradient(135deg, #5a8b3a 0%, #6ba045 100%);
+    box-shadow: 0 4px 15px rgba(90, 139, 58, 0.4);
+}
+
+.game-code-submit:hover {
+    background: linear-gradient(135deg, #6ba045 0%, #7cb858 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(90, 139, 58, 0.6);
+}
+
+.game-code-submit:active {
+    transform: translateY(0);
+}
+
+.game-code-submit:disabled {
+    background: #8b4513;
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.game-code-change {
+    background: linear-gradient(135deg, #8b4513 0%, #a0522d 100%);
+    box-shadow: 0 4px 15px rgba(139, 69, 19, 0.4);
+    font-size: 0.95em;
+    padding: 10px 20px;
+}
+
+.game-code-change:hover {
+    background: linear-gradient(135deg, #a0522d 0%, #b8653f 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(139, 69, 19, 0.6);
 }

@@ -1,0 +1,26 @@
+global:
+  scrape_interval: 15s      # Как часто собирать метрики
+  evaluation_interval: 15s  # Как часто оценивать правила
+  external_labels:
+    monitor: 'royal-exchange-monitor'
+
+# Конфигурация для сбора метрик с нашего приложения
+scrape_configs:
+  - job_name: 'royal-exchange'
+    scrape_interval: 10s
+    metrics_path: '/metrics/prometheus'
+    static_configs:
+      - targets: ['host.docker.internal:8000']  # Для Docker на Mac/Windows
+        labels:
+          environment: 'development'
+          service: 'royal-exchange-api'
+
+  # Альтернативная конфигурация для Linux (раскомментируйте, если нужно)
+  # - job_name: 'royal-exchange-linux'
+  #   scrape_interval: 10s
+  #   metrics_path: '/metrics/prometheus'
+  #   static_configs:
+  #     - targets: ['172.17.0.1:8000']  # Для Docker на Linux
+  #       labels:
+  #         environment: 'development'
+  #         service: 'royal-exchange-api'

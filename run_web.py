@@ -3,13 +3,19 @@
 """
 import os
 import uvicorn
+from dotenv import load_dotenv
+from logging_config import setup_logging
+
+# Загружаем переменные окружения из .env
+load_dotenv()
+
 from web_server import app
-import database
 
 if __name__ == "__main__":
-    # Инициализируем БД (если еще не инициализирована)
-    database.init_database()
+    # Настройка логирования (должна быть первой)
+    setup_logging()
     
+    # Инициализация БД происходит в startup event web_server.py
     # Игра будет загружена автоматически при старте сервера (в startup event)
     # или создана при первом запросе
     

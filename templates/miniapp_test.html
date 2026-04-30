@@ -214,17 +214,6 @@
                                 <span class="resource-screen-change-value" id="resource-screen-change-game">0%</span>
                             </div>
                         </div>
-                        
-                        <div class="resource-screen-indicators">
-                            <div class="resource-screen-indicator-item">
-                                <span class="resource-screen-indicator-label">Спрос:</span>
-                                <span class="resource-screen-indicator-value" id="resource-screen-demand" data-level="base">базовый</span>
-                            </div>
-                            <div class="resource-screen-indicator-item">
-                                <span class="resource-screen-indicator-label">Предложение:</span>
-                                <span class="resource-screen-indicator-value" id="resource-screen-supply" data-level="base">базовое</span>
-                            </div>
-                        </div>
                     </div>
                     
                     <div class="resource-screen-chart-container">
@@ -362,6 +351,8 @@
                             </ul>
                         </div>
                         
+                        <button class="build-building-buy-all-btn" onclick="buyAllResourcesForBuilding()">Купить все ресурсы в один клик</button>
+                        
                         <div class="build-building-quantity">
                             <span class="build-building-quantity-label">Количество:</span>
                             <div class="build-building-quantity-controls">
@@ -497,11 +488,6 @@
                         <div class="portfolio-building-stat-item">
                             <span class="portfolio-building-stat-label">Статус:</span>
                             <span class="portfolio-building-status" id="portfolio-building-status">-</span>
-                        </div>
-                        
-                        <div class="portfolio-building-stat-item">
-                            <span class="portfolio-building-stat-label">Количество:</span>
-                            <span class="portfolio-building-stat-value" id="portfolio-building-count">0</span>
                         </div>
                         
                         <div class="portfolio-building-stat-item">
@@ -677,14 +663,16 @@
         async function testResetGame() {
             if (confirm('Сбросить игру? Это перезагрузит страницу.')) {
                 document.getElementById('test-status').textContent = 'Сброс игры...';
-                await fetch('/api/miniapp/test/reset', { method: 'POST' });
+                const url = (window.addGameCodeToUrl || (u => u))('/api/miniapp/test/reset');
+                await fetch(url, { method: 'POST' });
                 location.reload();
             }
         }
 
         async function testAddMoney() {
             try {
-                const response = await fetch('/api/miniapp/test/add-money', {
+                const url = (window.addGameCodeToUrl || (u => u))('/api/miniapp/test/add-money');
+                const response = await fetch(url, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -703,7 +691,8 @@
 
         async function testAddResources() {
             try {
-                const response = await fetch('/api/miniapp/test/add-resources', {
+                const url = (window.addGameCodeToUrl || (u => u))('/api/miniapp/test/add-resources');
+                const response = await fetch(url, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -722,7 +711,8 @@
 
         async function testNextRound() {
             try {
-                const response = await fetch('/api/miniapp/test/next-round', {
+                const url = (window.addGameCodeToUrl || (u => u))('/api/miniapp/test/next-round');
+                const response = await fetch(url, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -735,15 +725,19 @@
                     if (window.loadPlayerState) await window.loadPlayerState();
                     if (window.loadPrices) await window.loadPrices();
                     if (window.loadRoundInfo) await window.loadRoundInfo();
+                } else {
+                    document.getElementById('test-status').textContent = 'Ошибка: ' + (data.detail || data.message || 'нет game_code');
                 }
             } catch (error) {
                 console.error('Ошибка:', error);
+                document.getElementById('test-status').textContent = 'Ошибка: ' + error.message;
             }
         }
 
         async function testCreateAllPlayers() {
             try {
-                const response = await fetch('/api/miniapp/test/create-players', {
+                const url = (window.addGameCodeToUrl || (u => u))('/api/miniapp/test/create-players');
+                const response = await fetch(url, {
                     method: 'POST'
                 });
                 const data = await response.json();

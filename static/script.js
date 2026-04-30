@@ -1,5 +1,114 @@
 let ws = null;
 let reconnectInterval = null;
+let gameCode = null; // Код игры (6 цифр)
+
+// ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
+
+/**
+ * Экранирование HTML для предотвращения XSS
+ */
+function escapeHtml(unsafe) {
+    if (unsafe == null) return '';
+    return String(unsafe)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+// ========== GAME CODE HELPERS ==========
+
+/**
+ * Валидация кода игры (6 цифр, 100000-999999)
+ */
+function validateGameCode(code) {
+    if (!code || typeof code !== 'string') {
+        return false;
+    }
+    const codeRegex = /^\d{6}$/;
+    if (!codeRegex.test(code)) {
+        return false;
+    }
+    const codeNum = parseInt(code, 10);
+    return codeNum >= 100000 && codeNum <= 999999;
+}
+
+/**
+ * Сохранить код игры в localStorage
+ */
+function saveGameCode(code) {
+    if (validateGameCode(code)) {
+        localStorage.setItem('web_game_code', code);
+        gameCode = code;
+        return true;
+    }
+    return false;
+}
+
+/**
+ * Получить код игры из localStorage
+ */
+function getGameCode() {
+    if (gameCode) {
+        return gameCode;
+    }
+    const saved = localStorage.getItem('web_game_code');
+    if (saved && validateGameCode(saved)) {
+        gameCode = saved;
+        return saved;
+    }
+    return null;
+}
+
+/**
+ * Очистить сохраненный код игры
+ */
+function clearGameCode() {
+    localStorage.removeItem('web_game_code');
+    gameCode = null;
+}
+
+/**
+ * Добавить game_code к URL как query-параметр
+ */
+function addGameCodeToUrl(url) {
+    const code = getGameCode();
+    if (!code) {
+        return url;
+    }
+    const separator = url.includes('?') ? '&' : '?';
+    return `${url}${separator}game_code=${encodeURIComponent(code)}`;
+}
+
+/**
+ * Проверить статус игры перед подключением
+ */
+async function checkGameStatus(code) {
+    try {
+        console.log('checkGameStatus: проверяю код', code);
+        const url = `/api/game-state?game_code=${encodeURIComponent(code)}`;
+        console.log('checkGameStatus: запрос к', url);
+        const response = await fetch(url);
+        console.log('checkGameStatus: статус ответа', response.status);
+        
+        if (response.status === 403) {
+            const data = await response.json().catch(() => ({}));
+            console.log('checkGameStatus: игра в архиве', data);
+            return { allowed: false, error: data.detail || 'Игра завершена и перемещена в архив' };
+        }
+        if (!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            console.log('checkGameStatus: ошибка ответа', response.status, data);
+            return { allowed: false, error: data.detail || 'Игра не найдена или недоступна' };
+        }
+        console.log('checkGameStatus: игра доступна');
+        return { allowed: true };
+    } catch (error) {
+        console.error('Ошибка проверки статуса игры:', error);
+        return { allowed: false, error: 'Ошибка подключения к серверу: ' + (error.message || 'Неизвестная ошибка') };
+    }
+}
 
 // Конфигурация видео: маппинг имен файлов на Google Drive ID
 const VIDEO_DRIVE_IDS = {
@@ -35,7 +144,13 @@ let gameState = {
 
 function connectWebSocket() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    const code = getGameCode();
+    let wsUrl = `${protocol}//${window.location.host}/ws`;
+    
+    // Добавляем game_code к WebSocket URL, если он есть
+    if (code) {
+        wsUrl += `?game_code=${encodeURIComponent(code)}`;
+    }
     
     ws = new WebSocket(wsUrl);
     
@@ -82,6 +197,11 @@ function updateUI(data) {
             // Обновляем из сервера только если раунд не был установлен вручную
             roundElement.textContent = serverRound;
             gameState.currentRound = serverRound;
+            // Загружаем контент для нового раунда и обновляем видимость кнопки
+            // Вызываем асинхронно, не блокируя обновление UI
+            loadRoundContentForCurrentRound().catch(error => {
+                console.error('Ошибка загрузки контента раунда:', error);
+            });
         }
     }
     if (data.num_players !== undefined) {
@@ -89,32 +209,77 @@ function updateUI(data) {
     }
     
     // Обновляем турнирную таблицу
-    if (data.leaderboard && data.leaderboard.leaderboard) {
-        updateLeaderboard(data.leaderboard.leaderboard);
+    // API возвращает leaderboard как массив напрямую, но WebSocket может отправлять как объект
+    const leaderboard = Array.isArray(data.leaderboard) ? data.leaderboard : (data.leaderboard?.leaderboard || []);
+    if (leaderboard && leaderboard.length > 0) {
+        updateLeaderboard(leaderboard);
     }
     
     // Обновляем цены
-    if (data.prices && data.prices.prices) {
-        updatePrices(data.prices.prices);
+    // API возвращает prices как массив напрямую, но WebSocket может отправлять как объект
+    const prices = Array.isArray(data.prices) ? data.prices : (data.prices?.prices || []);
+    if (prices && prices.length > 0) {
+        updatePrices(prices);
     }
     
-    // Обновляем объекты
-    if (data.buildings && data.buildings.buildings) {
-        updateBuildings(data.buildings.buildings);
-    }
+    // Обновляем объекты (всегда показываем карточки всех типов, при отсутствии данных — с нулями)
+    const buildings = Array.isArray(data.buildings) ? data.buildings : (data.buildings?.buildings || []);
+    updateBuildings(buildings || []);
+}
+
+function mergeLeaderboardRows(incoming, previous) {
+    if (!incoming || !incoming.length) return [];
+    if (!previous || !previous.length) return incoming.slice();
+    const prevById = {};
+    previous.forEach(function (p) {
+        if (p && p.player_id != null) prevById[String(p.player_id)] = p;
+    });
+    const enrichKeys = ['buildings_portfolio', 'growth_percent', 'growth_round_percent', 'growth_game_percent'];
+    return incoming.map(function (p) {
+        if (!p || p.player_id == null) return p;
+        const old = prevById[String(p.player_id)];
+        if (!old) return p;
+        const out = Object.assign({}, p);
+        enrichKeys.forEach(function (k) {
+            if (!Object.prototype.hasOwnProperty.call(out, k) && Object.prototype.hasOwnProperty.call(old, k)) {
+                out[k] = old[k];
+            }
+        });
+        return out;
+    });
 }
 
 function updateLeaderboard(leaderboard) {
     const tbody = document.getElementById('leaderboard-body');
     tbody.innerHTML = '';
-    
-    if (leaderboard.length === 0) {
+    const incoming = Array.isArray(leaderboard) ? leaderboard : [];
+    const merged = mergeLeaderboardRows(incoming, lastLeaderboardData);
+    lastLeaderboardData = merged.slice();
+
+    if (lastLeaderboardData.length > 0 && !Object.prototype.hasOwnProperty.call(lastLeaderboardData[0], 'buildings_portfolio')) {
+        if (!leaderboardEnrichPromise) {
+            leaderboardEnrichPromise = fetch(addGameCodeToUrl('/api/leaderboard'))
+                .then(function (res) { return res.json(); })
+                .then(function (data) {
+                    leaderboardEnrichPromise = null;
+                    var lb = data && data.leaderboard;
+                    if (lb && lb.length) {
+                        updateLeaderboard(lb);
+                    }
+                })
+                .catch(function () { leaderboardEnrichPromise = null; });
+        }
+    }
+
+    if (merged.length === 0) {
         tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #e8d5b7;">Игроки еще не добавлены</td></tr>';
         return;
     }
     
-    leaderboard.forEach((player, index) => {
+    merged.forEach((player, index) => {
         const row = document.createElement('tr');
+        row.classList.add('leaderboard-row-clickable');
+        row.setAttribute('data-player-index', String(index));
         
         // Прирост за раунд
         const growthRound = player.growth_round_percent || player.growth_percent || 0;
@@ -128,93 +293,90 @@ function updateLeaderboard(leaderboard) {
                                growthGame < 0 ? 'negative' : 'neutral';
         const growthGameSign = growthGame > 0 ? '+' : '';
         
+        const safePlayerName = escapeHtml(player.character_name || player.name || 'Игрок');
         row.innerHTML = `
             <td><strong style="color: #3a2a1a;">${index + 1}</strong></td>
-            <td style="color: #3a2a1a;">${player.character_name || player.name || 'Игрок'}</td>
+            <td style="color: #3a2a1a;">${safePlayerName}</td>
             <td style="color: #3a2a1a;">${Math.round(player.total_value)} монет</td>
             <td class="${growthRoundClass}">${growthRoundSign}${Math.round(growthRound)}%</td>
             <td class="${growthGameClass}">${growthGameSign}${Math.round(growthGame)}%</td>
         `;
         
-        tbody.appendChild(row);
-    });
-}
-
-function updatePrices(prices) {
-    const tbody = document.getElementById('prices-body');
-    tbody.innerHTML = '';
-    
-    if (prices.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #e8d5b7;">Цены не загружены</td></tr>';
-        return;
-    }
-    
-    prices.forEach(price => {
-        const row = document.createElement('tr');
-        
-        const prevClass = price.change_from_prev_percent > 0 ? 'positive' : 
-                         price.change_from_prev_percent < 0 ? 'negative' : 'neutral';
-        const startClass = price.change_from_start_percent > 0 ? 'positive' : 
-                          price.change_from_start_percent < 0 ? 'negative' : 'neutral';
-        
-        const prevSign = price.change_from_prev_percent > 0 ? '+' : '';
-        const startSign = price.change_from_start_percent > 0 ? '+' : '';
-        
-        // Делаем первую букву заглавной
-        const resourceName = price.resource.charAt(0).toUpperCase() + price.resource.slice(1);
-        
-        row.innerHTML = `
-            <td><strong style="color: #3a2a1a;">${resourceName}</strong></td>
-            <td style="color: #3a2a1a;">${Math.round(price.current_price)}</td>
-            <td class="${prevClass}">${prevSign}${Math.round(price.change_from_prev_percent)}%</td>
-            <td class="${startClass}">${startSign}${Math.round(price.change_from_start_percent)}%</td>
-        `;
-        
-        // Добавляем обработчик клика для открытия модального окна
-        row.style.cursor = 'pointer';
         row.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            console.log('Клик по ресурсу:', price.resource);
-            console.log('openResourceModal определена?', typeof openResourceModal);
-            if (typeof openResourceModal === 'function') {
-                openResourceModal(price.resource);
-            } else {
-                console.error('openResourceModal не определена!');
-            }
+            openPlayerModal(index);
         });
         
         tbody.appendChild(row);
     });
 }
 
-// Маппинг названий объектов на имена файлов картинок
-const buildingImages = {
-    'Лесоповал': 'лесоповал.png',
-    'Каменоломня': 'каменоломня.png',
-    'Рыболовня': 'рыболовня.png',
-    'Трактир': 'Трактир.png',
-    'Теплицы': 'теплицы.png',
-    'Посевные поля': 'Посевные поля.png',
-    'Ферма': 'ферма.png',
-    'Постоялый двор': 'постоялый двор.png',
-    'Куртизанские палатки': 'куртизанские палатки.png',
-    'Кузнечная': 'кузнечная.png',
-    'Золотой рудник': 'золотой рудник.png'
-};
+function updatePrices(prices) {
+    const pricesByResource = {};
+    (prices || []).forEach(p => { pricesByResource[p.resource] = p; });
+    const ordered = allResourcesOrder.map(res => pricesByResource[res]).filter(Boolean);
+    const n = ordered.length;
+    const size = Math.ceil(n / 3) || 1;
+    const chunks = [
+        ordered.slice(0, size),
+        ordered.slice(size, size * 2),
+        ordered.slice(size * 2, size * 3)
+    ];
+    [1, 2, 3].forEach((i, idx) => {
+        const tbody = document.getElementById('prices-body-' + i);
+        if (!tbody) return;
+        tbody.innerHTML = '';
+        const chunk = chunks[idx] || [];
+        if (chunk.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #3a2a1a;">—</td></tr>';
+            return;
+        }
+        chunk.forEach(price => {
+            const row = document.createElement('tr');
+            const prevClass = price.change_from_prev_percent > 0 ? 'positive' : price.change_from_prev_percent < 0 ? 'negative' : 'neutral';
+            const startClass = price.change_from_start_percent > 0 ? 'positive' : price.change_from_start_percent < 0 ? 'negative' : 'neutral';
+            const prevSign = price.change_from_prev_percent > 0 ? '+' : '';
+            const startSign = price.change_from_start_percent > 0 ? '+' : '';
+            const resourceName = escapeHtml(price.resource.charAt(0).toUpperCase() + price.resource.slice(1));
+            const resourceIconName = price.resource.charAt(0).toUpperCase() + price.resource.slice(1) + '.png';
+            const resourceIconPath = '/design/icons/' + encodeURIComponent(resourceIconName);
+            row.innerHTML = `
+                <td class="prices-resource-cell">
+                    <img src="${resourceIconPath}" alt="" class="prices-resource-icon" onerror="this.style.display='none'">
+                    <strong style="color: #3a2a1a;">${resourceName}</strong>
+                </td>
+                <td style="color: #3a2a1a;">${Math.round(price.current_price)}</td>
+                <td class="${prevClass}">${prevSign}${Math.round(price.change_from_prev_percent)}%</td>
+                <td class="${startClass}">${startSign}${Math.round(price.change_from_start_percent)}%</td>
+            `;
+            row.style.cursor = 'pointer';
+            row.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (typeof openResourceModal === 'function') openResourceModal(price.resource);
+            });
+            tbody.appendChild(row);
+        });
+    });
+}
 
-// Маппинг названий ресурсов на имена файлов картинок
-const resourceImages = {
-    'камень': 'камень.png',
-    'дерево': 'дерево.png',
-    'железо': 'железо.png',
-    'скот': 'скот.png',
-    'овощи': 'овощи.png',
-    'рабы': 'рабы.png',
-    'золото': 'золото.png',
-    'зерно': 'зерно.png',
-    'рыба': 'рыба.png'
-};
+/** Картинка объекта в модалке: design/картинки для карточек объектов/<имя в нижнем регистре> (1).png */
+function webBuildingModalImageUrl(buildingName) {
+    if (!buildingName) return '';
+    const dir = 'картинки для карточек объектов';
+    const file = buildingName.toLowerCase() + ' (1).png';
+    return '/design/' + encodeURIComponent(dir) + '/' + encodeURIComponent(file);
+}
+
+/** Картинка ресурса в модалке: design/картинки для веба (ресурсы)/<Имя> (1).png */
+function webResourceModalImageUrl(resourceName) {
+    if (!resourceName) return '';
+    const name = resourceName.charAt(0).toUpperCase() + resourceName.slice(1);
+    const dir = 'картинки для веба (ресурсы)';
+    const file = name + ' (1).png';
+    return '/design/' + encodeURIComponent(dir) + '/' + encodeURIComponent(file);
+}
 
 // Порядок ресурсов для навигации (должен совпадать с порядком в таблице цен - sorted по алфавиту)
 const allResourcesOrder = [
@@ -234,6 +396,179 @@ const allBuildingsOrder = [
 // Глобальные переменные для навигации
 let currentBuildingIndex = -1;
 let buildingsDataCache = {}; // Кэш данных объектов {name: {count, percentage}}
+
+/** Последние данные турнирной таблицы (для карточки игрока) */
+let lastLeaderboardData = [];
+/** Если WS отдаёт строки без buildings_portfolio — один раз подтягиваем GET /api/leaderboard (полный build_enriched). */
+let leaderboardEnrichPromise = null;
+let currentPlayerModalIndex = 0;
+let playerModalEl = null;
+
+function buildingIconUrlForName(buildingName) {
+    if (!buildingName) return '';
+    return '/design/icons/' + encodeURIComponent(buildingName) + '.png';
+}
+
+/** Подписи статусов как в мини-приложении (портфель, updateBuildings). */
+function portfolioStatusText(status) {
+    const s = (status == null) ? '' : String(status);
+    const statusMap = {
+        building: 'Строится',
+        active: 'Активен',
+        for_sale: 'Продается',
+        sold: 'Продан',
+        completed: 'Активен',
+    };
+    return statusMap[s] || status;
+}
+
+function fillPlayerModalCard(player, rankIndex) {
+    const name = player.character_name || player.name || 'Игрок';
+    const money = typeof player.money === 'number' ? player.money : parseFloat(player.money) || 0;
+    const totalVal = player.total_value != null && player.total_value !== ''
+        ? Number(player.total_value)
+        : NaN;
+    const displayCapitalization = Number.isFinite(totalVal) ? totalVal : money;
+    const gr = player.growth_round_percent != null ? player.growth_round_percent : (player.growth_percent || 0);
+    const gg = player.growth_game_percent != null ? player.growth_game_percent : 0;
+
+    const nameEl = document.getElementById('player-modal-name');
+    const moneyValueEl = document.getElementById('player-modal-money-value');
+    const rankNumEl = document.getElementById('player-modal-rank-num');
+    const pillRound = document.getElementById('player-modal-pill-round');
+    const pillGame = document.getElementById('player-modal-pill-game');
+    const listEl = document.getElementById('player-modal-buildings');
+    const imgEl = document.getElementById('player-modal-avatar');
+    const fbEl = document.getElementById('player-modal-avatar-fallback');
+
+    if (nameEl) nameEl.textContent = name;
+    if (rankNumEl) rankNumEl.textContent = String(rankIndex + 1);
+    if (moneyValueEl) moneyValueEl.textContent = Math.round(displayCapitalization).toLocaleString('ru-RU');
+
+    if (pillRound) {
+        const signR = gr > 0 ? '+' : '';
+        pillRound.textContent = `${signR}${Math.round(gr)}%`;
+        pillRound.classList.toggle('negative', gr < 0);
+    }
+    if (pillGame) {
+        const signG = gg > 0 ? '+' : '';
+        pillGame.textContent = `${signG}${Math.round(gg)}%`;
+        pillGame.classList.toggle('negative', gg < 0);
+    }
+
+    const photo = player.character_image;
+    if (photo && imgEl && fbEl) {
+        imgEl.onload = () => {
+            imgEl.style.display = 'block';
+            fbEl.style.display = 'none';
+        };
+        imgEl.onerror = () => {
+            imgEl.style.display = 'none';
+            fbEl.style.display = 'flex';
+            fbEl.textContent = (name.charAt(0) || '?').toUpperCase();
+        };
+        imgEl.src = photo;
+        if (imgEl.complete && imgEl.naturalWidth > 0) {
+            imgEl.style.display = 'block';
+            fbEl.style.display = 'none';
+        }
+    } else if (imgEl && fbEl) {
+        imgEl.removeAttribute('src');
+        imgEl.style.display = 'none';
+        fbEl.style.display = 'flex';
+        fbEl.textContent = (name.charAt(0) || '?').toUpperCase();
+    }
+
+    if (listEl) {
+        listEl.innerHTML = '';
+        const portfolio = (player.buildings_portfolio || []).filter(function (row) {
+            return row && row.status !== 'sold';
+        });
+        if (portfolio.length > 0) {
+            portfolio.forEach((row) => {
+                const li = document.createElement('li');
+                const icon = document.createElement('img');
+                icon.className = 'player-modal-building-icon';
+                icon.alt = '';
+                icon.src = buildingIconUrlForName(row.name);
+                icon.onerror = () => { icon.style.visibility = 'hidden'; };
+                const label = document.createElement('span');
+                label.className = 'player-modal-building-name';
+                label.textContent = row.name;
+                const pill = document.createElement('span');
+                pill.className = 'building-status-pill ' + (row.status || '');
+                pill.textContent = portfolioStatusText(row.status);
+                li.appendChild(icon);
+                li.appendChild(label);
+                li.appendChild(pill);
+                listEl.appendChild(li);
+            });
+        } else {
+            const li = document.createElement('li');
+            li.className = 'player-modal-buildings-empty';
+            li.textContent = 'Нет объектов';
+            listEl.appendChild(li);
+        }
+    }
+}
+
+/** Карточка игрока: при урезанных данных WS подгружаем строку из GET /api/leaderboard. */
+function fillPlayerModalFromIndex(index) {
+    const base = lastLeaderboardData[index];
+    if (!base) return;
+    if (Object.prototype.hasOwnProperty.call(base, 'buildings_portfolio')) {
+        fillPlayerModalCard(base, index);
+        return;
+    }
+    fillPlayerModalCard(base, index);
+    fetch(addGameCodeToUrl('/api/leaderboard'))
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+            const lb = data && data.leaderboard;
+            if (lb && lb.length) {
+                const row = lb.find(function (p) { return p.player_id === base.player_id; });
+                if (row) lastLeaderboardData[index] = row;
+            }
+            fillPlayerModalCard(lastLeaderboardData[index], index);
+        })
+        .catch(function () {});
+}
+
+function updatePlayerModalNavButtons() {
+    const left = document.getElementById('player-modal-nav-left');
+    const right = document.getElementById('player-modal-nav-right');
+    const n = lastLeaderboardData.length;
+    if (left) left.disabled = n <= 1 || currentPlayerModalIndex <= 0;
+    if (right) right.disabled = n <= 1 || currentPlayerModalIndex >= n - 1;
+}
+
+function openPlayerModal(playerIndex) {
+    if (!lastLeaderboardData.length || playerIndex < 0 || playerIndex >= lastLeaderboardData.length) {
+        return;
+    }
+    currentPlayerModalIndex = playerIndex;
+    fillPlayerModalFromIndex(currentPlayerModalIndex);
+    updatePlayerModalNavButtons();
+    if (playerModalEl) {
+        playerModalEl.style.display = 'block';
+    }
+}
+
+function closePlayerModal() {
+    if (playerModalEl) {
+        playerModalEl.style.display = 'none';
+    }
+}
+
+function navigatePlayerModal(delta) {
+    const n = lastLeaderboardData.length;
+    if (n <= 1) return;
+    let next = currentPlayerModalIndex + delta;
+    if (next < 0 || next >= n) return;
+    currentPlayerModalIndex = next;
+    fillPlayerModalFromIndex(currentPlayerModalIndex);
+    updatePlayerModalNavButtons();
+}
 
 function updateBuildings(buildings) {
     const grid = document.getElementById('buildings-grid');
@@ -283,9 +618,9 @@ function updateBuildings(buildings) {
         card.setAttribute('data-building-count', building.count);
         card.setAttribute('data-building-percentage', Math.round(building.players_percentage));
         
-        // Получаем имя файла картинки
-        const imageFile = buildingImages[building.name] || 'лесоповал.png';
-        const imagePath = `/static/images/buildings/${imageFile}`;
+        // Картинки для карточек — только из папки design/картинки для карточек объектов (название (1).png)
+        const cardImageFile = buildingName.toLowerCase() + ' (1).png';
+        const imagePath = '/design/картинки%20для%20карточек%20объектов/' + encodeURIComponent(cardImageFile);
         
         // Получаем информацию о стоимости и доходе
         const buildingCosts = {
@@ -316,36 +651,38 @@ function updateBuildings(buildings) {
             "Золотой рудник": {"монеты": 0, "ресурсы": {"золото": 2}}
         };
         
-        const costs = buildingCosts[buildingName] || {};
         const income = buildingIncome[buildingName] || {};
         
-        // Форматируем стоимость
-        let costText = '';
-        const costEntries = Object.entries(costs);
-        if (costEntries.length > 0) {
-            costText = costEntries.map(([res, amt]) => `${res}: ${amt}`).join(', ');
-        }
-        
-        // Форматируем доход
-        let incomeText = '';
+        // Ресурс/доход для нижнего блока карточки (как на макете)
+        let resourceText = '';
         if (income.монеты > 0) {
-            incomeText = `${income.монеты} монет`;
+            resourceText = `монеты: ${income.монеты}`;
         } else if (income.ресурсы && Object.keys(income.ресурсы).length > 0) {
-            const incomeEntries = Object.entries(income.ресурсы);
-            incomeText = incomeEntries.map(([res, amt]) => `${res}: ${amt}`).join(', ');
+            const first = Object.entries(income.ресурсы)[0];
+            resourceText = first ? `${first[0]}: ${first[1]}` : '';
         }
         
+        const safeBuildingName = escapeHtml(building.name);
+        const displayName = building.name.toUpperCase();
+        const pct = Math.round(building.players_percentage);
+        const tr = building.players_pct_trend;
+        const trend = tr === 'up' || tr === 'down' ? tr : 'same';
         card.innerHTML = `
-            <div class="building-name">${building.name}</div>
-            <img src="${imagePath}" alt="${building.name}" class="building-image" onerror="this.style.display='none'">
-            <div class="building-stats">
-                <div class="building-count">${building.count}</div>
-                <div class="building-percentage-container">
-                    <div class="building-percentage">${Math.round(building.players_percentage)}%</div>
-                    <div class="building-percentage-label">игроков</div>
-                </div>
+            <div class="building-card-image-wrap">
+                <img src="${imagePath}" alt="${safeBuildingName}" class="building-image" onerror="this.style.display='none'">
             </div>
-            ${incomeText ? `<div class="building-income">${incomeText}</div>` : ''}
+            <div class="building-card-content">
+                <div class="building-name">${displayName}</div>
+                <div class="building-stats">
+                    <div class="building-count">${building.count}</div>
+                    <div class="building-percentage-container">
+                        <span class="building-percentage">${pct}%</span>
+                        <span class="building-percentage-label">игроков</span>
+                    </div>
+                    <span class="building-trend building-trend-${trend}" aria-label="${trend === 'up' ? 'Рост' : trend === 'down' ? 'Спад' : 'Без изменений'}"></span>
+                </div>
+                ${resourceText ? `<div class="building-resource">${escapeHtml(resourceText)}</div>` : ''}
+            </div>
         `;
         
         // Добавляем обработчик клика для открытия модального окна
@@ -362,7 +699,7 @@ function updateBuildings(buildings) {
 
 // Модальное окно для деталей объекта
 const modal = document.getElementById('building-modal');
-const modalClose = document.querySelector('.modal-close');
+const modalClose = document.getElementById('building-modal-close');
 
 // Кнопки навигации
 const modalNavLeft = document.getElementById('modal-nav-left');
@@ -377,10 +714,12 @@ modalNavRight.addEventListener('click', () => {
     navigateToNext();
 });
 
-// Закрытие модального окна
-modalClose.addEventListener('click', () => {
-    modal.style.display = 'none';
-});
+// Закрытие модального окна объекта
+if (modalClose) {
+    modalClose.addEventListener('click', () => {
+        modal.style.display = 'none';
+    });
+}
 
 window.addEventListener('click', (event) => {
     if (event.target === modal) {
@@ -390,6 +729,9 @@ window.addEventListener('click', (event) => {
 
 // Навигация с клавиатуры
 document.addEventListener('keydown', (event) => {
+    if (typeof playerModalEl !== 'undefined' && playerModalEl && playerModalEl.style.display === 'block') {
+        return;
+    }
     if (modal.style.display === 'block') {
         if (event.key === 'ArrowLeft') {
             navigateToPrevious();
@@ -402,45 +744,37 @@ document.addEventListener('keydown', (event) => {
 });
 
 // Функция для открытия модального окна с деталями объекта
-async function openBuildingModal(buildingName, cardCount, cardPercentage) {
+function openBuildingModal(buildingName, cardCount, cardPercentage) {
     // Находим индекс текущего объекта
     currentBuildingIndex = allBuildingsOrder.indexOf(buildingName);
     if (currentBuildingIndex === -1) {
         currentBuildingIndex = 0;
     }
     
-    // Загружаем данные для текущего объекта
-    await loadBuildingModalData(buildingName, cardCount, cardPercentage);
+    loadBuildingModalData(buildingName, cardCount, cardPercentage);
     
     // Обновляем состояние кнопок навигации
     updateNavigationButtons();
 }
 
 // Функция для загрузки данных объекта в модальное окно
-async function loadBuildingModalData(buildingName, cardCount, cardPercentage) {
+function loadBuildingModalData(buildingName, cardCount, cardPercentage) {
     try {
         // Используем данные из кэша, если они есть, иначе из параметров
         const cachedData = buildingsDataCache[buildingName];
         const count = cachedData ? cachedData.count : cardCount;
         const percentage = cachedData ? cachedData.percentage : cardPercentage;
         
-        // Сначала заполняем данные из карточки (чтобы они совпадали)
-        const imageFile = buildingImages[buildingName] || 'лесоповал.png';
-        document.getElementById('modal-building-image').src = `/static/images/buildings/${imageFile}`;
+        const imagePath = webBuildingModalImageUrl(buildingName);
+        const imageEl = document.getElementById('modal-building-image');
+        imageEl.src = imagePath;
+        imageEl.alt = buildingName;
+        imageEl.style.display = 'block';
+        imageEl.onerror = function () {
+            this.style.display = 'none';
+        };
+        
         document.getElementById('modal-building-name').textContent = buildingName;
-        document.getElementById('modal-building-count').textContent = count;
-        document.getElementById('modal-building-percentage').textContent = `${percentage}%`;
-        
-        // Затем загружаем детальную информацию (владельцев)
-        const response = await fetch(`/api/building/${encodeURIComponent(buildingName)}`);
-        const data = await response.json();
-        
-        if (data.error) {
-            console.error('Ошибка загрузки данных:', data.error);
-            return;
-        }
-        
-        // Используем данные из карточки/кэша, чтобы они точно совпадали
         document.getElementById('modal-building-count').textContent = count;
         document.getElementById('modal-building-percentage').textContent = `${percentage}%`;
         
@@ -501,24 +835,6 @@ async function loadBuildingModalData(buildingName, cardCount, cardPercentage) {
             incomeValue.textContent = 'Нет данных';
         }
         
-        // Заполняем правую часть - список владельцев
-        const ownersList = document.getElementById('modal-owners-list');
-        ownersList.innerHTML = '';
-        
-        if (data.owners && data.owners.length > 0) {
-            data.owners.forEach(owner => {
-                const ownerItem = document.createElement('div');
-                ownerItem.className = 'modal-owner-item';
-                ownerItem.innerHTML = `
-                    <span class="modal-owner-name">${owner.character_name || owner.name || 'Игрок'}</span>
-                    <span class="modal-owner-count">${owner.count}</span>
-                `;
-                ownersList.appendChild(ownerItem);
-            });
-        } else {
-            ownersList.innerHTML = '<div style="text-align: center; color: #3a2a1a; padding: 20px;">Нет владельцев</div>';
-        }
-        
         // Показываем модальное окно
         modal.style.display = 'block';
     } catch (error) {
@@ -539,23 +855,23 @@ function updateNavigationButtons() {
 }
 
 // Функция для переключения на предыдущий объект
-async function navigateToPrevious() {
+function navigateToPrevious() {
     if (currentBuildingIndex > 0) {
         currentBuildingIndex--;
         const buildingName = allBuildingsOrder[currentBuildingIndex];
         const cachedData = buildingsDataCache[buildingName] || { count: 0, percentage: 0 };
-        await loadBuildingModalData(buildingName, cachedData.count, cachedData.percentage);
+        loadBuildingModalData(buildingName, cachedData.count, cachedData.percentage);
         updateNavigationButtons();
     }
 }
 
 // Функция для переключения на следующий объект
-async function navigateToNext() {
+function navigateToNext() {
     if (currentBuildingIndex < allBuildingsOrder.length - 1) {
         currentBuildingIndex++;
         const buildingName = allBuildingsOrder[currentBuildingIndex];
         const cachedData = buildingsDataCache[buildingName] || { count: 0, percentage: 0 };
-        await loadBuildingModalData(buildingName, cachedData.count, cachedData.percentage);
+        loadBuildingModalData(buildingName, cachedData.count, cachedData.percentage);
         updateNavigationButtons();
     }
 }
@@ -582,7 +898,7 @@ async function openResourceModal(resourceName) {
 // Функция для загрузки данных ресурса в модальное окно
 async function loadResourceModalData(resourceName) {
     try {
-        const response = await fetch(`/api/resource/${encodeURIComponent(resourceName)}`);
+        const response = await fetch(addGameCodeToUrl(`/api/resource/${encodeURIComponent(resourceName)}`));
         
         if (!response.ok) {
             console.error('Ошибка API:', response.status, response.statusText);
@@ -598,12 +914,11 @@ async function loadResourceModalData(resourceName) {
         
         // Заполняем данные
         const resourceNameCapitalized = data.name.charAt(0).toUpperCase() + data.name.slice(1);
-        document.getElementById('resource-modal-name').textContent = resourceNameCapitalized;
+        document.getElementById('resource-modal-name').textContent = escapeHtml(resourceNameCapitalized);
         document.getElementById('resource-modal-price').textContent = `${data.current_price} монет`;
         
         // Загружаем картинку ресурса
-        const imageFile = resourceImages[resourceName] || `${resourceName}.png`;
-        const imagePath = `/static/images/resources/${imageFile}`;
+        const imagePath = webResourceModalImageUrl(resourceName);
         const imageEl = document.getElementById('resource-modal-image');
         imageEl.src = imagePath;
         imageEl.alt = resourceNameCapitalized;
@@ -627,15 +942,6 @@ async function loadResourceModalData(resourceName) {
         const changeStartEl = document.getElementById('resource-modal-change-start');
         changeStartEl.textContent = `${changeStartSign}${Math.round(data.change_from_start_percent)}%`;
         changeStartEl.className = `modal-stat-value ${changeStartClass}`;
-        
-        // Спрос и предложение
-        const demandEl = document.getElementById('resource-modal-demand');
-        demandEl.textContent = data.demand_level;
-        demandEl.setAttribute('data-level', data.demand_level);
-        
-        const supplyEl = document.getElementById('resource-modal-supply');
-        supplyEl.textContent = data.supply_level;
-        supplyEl.setAttribute('data-level', data.supply_level);
         
         // Показываем модальное окно
         if (resourceModal) {
@@ -688,25 +994,24 @@ async function navigateToNextResource() {
     }
 }
 
-// Функция для отрисовки графика цены
+// Функция для отрисовки графика цены (логика совпадает с миниапом: drawPriceChartForResource)
 function drawPriceChart(priceHistory) {
     const canvas = document.getElementById('resource-price-chart');
     if (!canvas) {
         console.error('Canvas не найден');
         return;
     }
-    
+
     const ctx = canvas.getContext('2d');
-    
-    // Устанавливаем размер canvas
+
     const container = canvas.parentElement;
     if (container) {
-        canvas.width = container.clientWidth - 20; // Учитываем padding
+        canvas.width = container.clientWidth - 20;
     } else {
         canvas.width = canvas.offsetWidth || 400;
     }
     canvas.height = 300;
-    
+
     if (!priceHistory || priceHistory.length === 0) {
         ctx.fillStyle = '#3a2a1a';
         ctx.font = '16px Arial';
@@ -714,136 +1019,119 @@ function drawPriceChart(priceHistory) {
         ctx.fillText('Нет данных для графика', canvas.width / 2, canvas.height / 2);
         return;
     }
-    
-    // Очищаем canvas
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    // Параметры графика
+
     const padding = 40;
     const chartWidth = canvas.width - padding * 2;
     const chartHeight = canvas.height - padding * 2;
-    
-    // Стандартизируем: в точке 0 (раунд 0) цена должна быть 0
-    let standardizedHistory = priceHistory.map((point, index) => {
-        if (index === 0 && point.round === 0) {
-            return { round: 0, price: 0 };
-        }
-        return point;
-    });
-    
-    // Убираем последнюю точку, если она дублирует предыдущую (последний шаг графика прямой)
-    if (standardizedHistory.length > 2) {
-        const lastPoint = standardizedHistory[standardizedHistory.length - 1];
-        const prevPoint = standardizedHistory[standardizedHistory.length - 2];
-        
-        // Если последняя точка имеет тот же раунд, что и предыдущая, или ту же цену - убираем её
-        if (lastPoint.round === prevPoint.round || lastPoint.price === prevPoint.price) {
-            standardizedHistory = standardizedHistory.slice(0, -1);
-        }
+
+    const byRound = new Map();
+    for (const p of priceHistory) {
+        if (!p || typeof p.round !== 'number' || p.round < 1) continue;
+        byRound.set(p.round, { round: p.round, price: Number(p.price) });
     }
-    
-    // Находим минимальное и максимальное значение цены
-    // Для оси Y: минимум всегда 0, максимум - максимальная цена
-    const prices = standardizedHistory.map(h => h.price);
-    const minPrice = 0; // Ось Y всегда начинается с 0
+    let standardizedHistory = Array.from(byRound.keys())
+        .sort((a, b) => a - b)
+        .map((r) => byRound.get(r));
+    if (standardizedHistory.length === 0) {
+        ctx.fillStyle = '#3a2a1a';
+        ctx.font = '16px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Нет данных для графика', canvas.width / 2, canvas.height / 2);
+        return;
+    }
+
+    const prices = standardizedHistory.map((h) => h.price);
+    const minPrice = 0;
     const maxPrice = Math.max(...prices);
-    const priceRange = maxPrice - minPrice || 1; // Избегаем деления на ноль
-    
-    // Рисуем оси
+    const priceRange = maxPrice - minPrice || 1;
+
     ctx.strokeStyle = '#8b4513';
     ctx.lineWidth = 2;
-    
-    // Ось X (раунды)
+
     ctx.beginPath();
     ctx.moveTo(padding, canvas.height - padding);
     ctx.lineTo(canvas.width - padding, canvas.height - padding);
     ctx.stroke();
-    
-    // Ось Y (цена)
+
     ctx.beginPath();
     ctx.moveTo(padding, padding);
     ctx.lineTo(padding, canvas.height - padding);
     ctx.stroke();
-    
-    // Рисуем сетку и подписи
+
     ctx.strokeStyle = '#8b4513';
     ctx.lineWidth = 1;
     ctx.setLineDash([5, 5]);
-    
-    // Горизонтальные линии (цены)
+
     const gridLines = 5;
     for (let i = 0; i <= gridLines; i++) {
         const y = padding + (chartHeight / gridLines) * i;
         const price = maxPrice - (priceRange / gridLines) * i;
-        
+
         ctx.beginPath();
         ctx.moveTo(padding, y);
         ctx.lineTo(canvas.width - padding, y);
         ctx.stroke();
-        
-        // Подпись цены
+
         ctx.fillStyle = '#3a2a1a';
         ctx.font = '12px Arial';
         ctx.textAlign = 'right';
         ctx.fillText(Math.round(price).toString(), padding - 10, y + 4);
     }
-    
+
     ctx.setLineDash([]);
-    
-    // Рисуем график
-    // Линия начинается с цены первого раунда (пропускаем точку 0)
-    ctx.strokeStyle = '#006400'; // Темно-зеленый цвет
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    
-    let lineStarted = false;
+
+    const n = standardizedHistory.length;
+
+    function xForIndex(index) {
+        if (n <= 1) return padding;
+        return padding + (chartWidth / (n - 1)) * index;
+    }
+    function yForPrice(price) {
+        return padding + chartHeight - ((price - minPrice) / priceRange) * chartHeight;
+    }
+
+    if (n >= 2) {
+        ctx.strokeStyle = '#006400';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        standardizedHistory.forEach((point, index) => {
+            const x = xForIndex(index);
+            const y = yForPrice(point.price);
+            if (index === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+        });
+        ctx.stroke();
+    }
+
+    ctx.fillStyle = '#006400';
+    const labelStride = n > 12 ? Math.ceil(n / 8) : 1;
     standardizedHistory.forEach((point, index) => {
-        const x = padding + (chartWidth / (standardizedHistory.length - 1)) * index;
-        const y = padding + chartHeight - ((point.price - minPrice) / priceRange) * chartHeight;
-        
-        // Пропускаем точку 0 (раунд 0), начинаем линию с первого раунда
-        if (index === 0) {
-            // Не рисуем линию от точки 0, но сохраняем координату для точки
-            return;
-        }
-        
-        if (!lineStarted) {
-            // Начинаем линию с цены первого раунда
-            ctx.moveTo(x, y);
-            lineStarted = true;
-        } else {
-            ctx.lineTo(x, y);
-        }
-    });
-    
-    ctx.stroke();
-    
-    // Рисуем точки (включая точку 0)
-    ctx.fillStyle = '#006400'; // Темно-зеленый цвет
-    standardizedHistory.forEach((point, index) => {
-        const x = padding + (chartWidth / (standardizedHistory.length - 1)) * index;
-        const y = padding + chartHeight - ((point.price - minPrice) / priceRange) * chartHeight;
-        
+        const x = xForIndex(index);
+        const y = yForPrice(point.price);
         ctx.beginPath();
         ctx.arc(x, y, 4, 0, Math.PI * 2);
         ctx.fill();
-        
-        // Подпись раунда
-        if (index === 0 || index === standardizedHistory.length - 1 || index % Math.ceil(standardizedHistory.length / 5) === 0) {
+        const showLabel =
+            n <= 12 || index === 0 || index === n - 1 || index % labelStride === 0;
+        if (showLabel) {
             ctx.fillStyle = '#3a2a1a';
             ctx.font = '11px Arial';
             ctx.textAlign = 'center';
-            ctx.fillText(point.round.toString(), x, canvas.height - padding + 20);
-            ctx.fillStyle = '#006400'; // Темно-зеленый цвет
+            ctx.fillText(String(point.round), x, canvas.height - padding + 20);
+            ctx.fillStyle = '#006400';
         }
     });
-    
-    // Подписи осей
+
     ctx.fillStyle = '#3a2a1a';
     ctx.font = '14px Arial';
     ctx.textAlign = 'center';
     ctx.fillText('Раунд', canvas.width / 2, canvas.height - 10);
-    
+
     ctx.save();
     ctx.translate(15, canvas.height / 2);
     ctx.rotate(-Math.PI / 2);
@@ -853,47 +1141,175 @@ function drawPriceChart(priceHistory) {
 
 // Функции управления игровым flow
 function setupGameFlow() {
+    // Загружаем сохраненный game_code при загрузке страницы
+    const savedCode = getGameCode();
+    const gameCodeInput = document.getElementById('game-code-input');
+    const changeGameBtn = document.getElementById('change-game-btn');
+    
+    if (gameCodeInput && savedCode) {
+        gameCodeInput.value = savedCode;
+        if (changeGameBtn) {
+            changeGameBtn.style.display = 'block';
+        }
+    }
+    
+    // Обработка ввода только цифр в поле game_code
+    if (gameCodeInput) {
+        // Убеждаемся, что поле доступно для ввода
+        gameCodeInput.disabled = false;
+        gameCodeInput.readOnly = false;
+        
+        gameCodeInput.addEventListener('input', (e) => {
+            e.target.value = e.target.value.replace(/\D/g, '');
+        });
+        
+        gameCodeInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                document.getElementById('start-game-btn')?.click();
+            }
+        });
+        
+        // Фокус на поле при загрузке, если нет сохраненного кода
+        if (!savedCode) {
+            setTimeout(() => {
+                gameCodeInput.focus();
+            }, 100);
+        }
+    }
+    
+    // Кнопка "Сменить игру"
+    if (changeGameBtn) {
+        changeGameBtn.addEventListener('click', () => {
+            clearGameCode();
+            if (gameCodeInput) {
+                gameCodeInput.value = '';
+                gameCodeInput.focus();
+            }
+            changeGameBtn.style.display = 'none';
+        });
+    }
+    
     // Кнопка "Начать игру"
     const startBtn = document.getElementById('start-game-btn');
     if (startBtn) {
-        startBtn.addEventListener('click', () => {
-            if (ENABLE_VIDEOS) {
-                playVideo('Введение.mp4', () => {
-                    showScreen('intro-complete');
-                });
-            } else {
-                // Видео отключены - сразу переходим к следующему экрану
+        startBtn.addEventListener('click', async () => {
+            try {
+                // Проверяем и сохраняем game_code
+                const code = gameCodeInput?.value.trim() || '';
+                const errorDiv = document.getElementById('game-code-error');
+                
+                if (!code) {
+                    if (errorDiv) {
+                        errorDiv.textContent = 'Введите код игры (6 цифр)';
+                        errorDiv.style.display = 'block';
+                    }
+                    gameCodeInput?.focus();
+                    return;
+                }
+                
+                if (!validateGameCode(code)) {
+                    if (errorDiv) {
+                        errorDiv.textContent = 'Код должен состоять из 6 цифр (100000-999999)';
+                        errorDiv.style.display = 'block';
+                    }
+                    gameCodeInput?.focus();
+                    return;
+                }
+                
+                // Проверяем статус игры
+                console.log('Проверяю статус игры для кода:', code);
+                const statusCheck = await checkGameStatus(code);
+                console.log('Результат проверки статуса:', statusCheck);
+                
+                if (!statusCheck.allowed) {
+                    if (errorDiv) {
+                        errorDiv.textContent = statusCheck.error || 'Игра недоступна';
+                        errorDiv.style.display = 'block';
+                    }
+                    gameCodeInput?.focus();
+                    return;
+                }
+                
+                // Сохраняем код
+                saveGameCode(code);
+                if (errorDiv) {
+                    errorDiv.style.display = 'none';
+                }
+                if (changeGameBtn) {
+                    changeGameBtn.style.display = 'block';
+                }
+                
+                console.log('Переход к экрану intro-complete');
+                // Переходим на экран с кнопками
                 showScreen('intro-complete');
+            } catch (error) {
+                console.error('Ошибка при запуске игры:', error);
+                const errorDiv = document.getElementById('game-code-error');
+                if (errorDiv) {
+                    errorDiv.textContent = 'Ошибка при запуске игры: ' + (error.message || 'Неизвестная ошибка');
+                    errorDiv.style.display = 'block';
+                }
             }
         });
     }
 
-    // Кнопка "Новая игра"
+    // Кнопка "Х" — открыть/закрыть меню (Новая игра, Начать сначала, Подвести итоги)
+    const headerMenuBtn = document.getElementById('header-menu-btn');
+    const headerMenuDropdown = document.getElementById('header-menu-dropdown');
+    if (headerMenuBtn && headerMenuDropdown) {
+        headerMenuBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isOpen = headerMenuDropdown.style.display === 'block';
+            headerMenuDropdown.style.display = isOpen ? 'none' : 'block';
+        });
+        document.addEventListener('click', () => {
+            headerMenuDropdown.style.display = 'none';
+        });
+        headerMenuDropdown.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (e.target.classList.contains('header-menu-item')) {
+                headerMenuDropdown.style.display = 'none';
+            }
+        });
+    }
+
+    // Кнопка "Новая игра" — переход на экран ввода кода (без вызова API)
     const newGameBtn = document.getElementById('new-game-btn');
     if (newGameBtn) {
-        newGameBtn.addEventListener('click', async () => {
-            if (confirm('Вы уверены, что хотите создать новую игру? Все текущие данные будут удалены.')) {
-                try {
-                    const response = await fetch('/api/game/new-game', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        }
-                    });
-                    
-                    if (response.ok) {
-                        const data = await response.json();
-                        alert('Новая игра создана!');
-                        // Перезагружаем страницу для обновления данных
-                        location.reload();
-                    } else {
-                        const error = await response.json();
-                        alert('Ошибка создания новой игры: ' + error.detail);
-                    }
-                } catch (error) {
-                    console.error('Ошибка создания новой игры:', error);
-                    alert('Ошибка создания новой игры');
+        newGameBtn.addEventListener('click', () => {
+            if (confirm('Начать новую игру? Вы перейдёте на экран ввода кода игры.')) {
+                clearGameCode();
+                const gameCodeInput = document.getElementById('game-code-input');
+                if (gameCodeInput) {
+                    gameCodeInput.value = '';
                 }
+                showScreen('start');
+            }
+        });
+    }
+
+    // Кнопка "Посмотреть интро" — контент из админки (round_number = 0), модалка как у видео раундов
+    const showIntroBtn = document.getElementById('show-intro-btn');
+    if (showIntroBtn) {
+        showIntroBtn.addEventListener('click', async () => {
+            const code = getGameCode();
+            if (!code) {
+                alert('Введите код игры');
+                return;
+            }
+            try {
+                const response = await fetch(addGameCodeToUrl('/api/intro/content'));
+                const data = await response.json().catch(() => ({}));
+                if (data.success && data.content_url) {
+                    window.currentRoundNumber = 0;
+                    window.roundContent = { content_url: data.content_url, content_type: data.content_type || 'video' };
+                    showRoundVideo();
+                } else {
+                    alert(data.message || 'Интро не настроено');
+                }
+            } catch (err) {
+                console.error('Ошибка загрузки интро:', err);
+                alert('Не удалось загрузить интро. Попробуйте позже.');
             }
         });
     }
@@ -918,29 +1334,49 @@ function setupGameFlow() {
     const nextRoundBtn = document.getElementById('next-round-btn');
     if (nextRoundBtn) {
         nextRoundBtn.addEventListener('click', async () => {
-            // Используем gameState.currentRound вместо чтения из DOM
-            const currentRound = gameState.currentRound || parseInt(document.getElementById('current-round').textContent) || 1;
+            const currentRound = gameState.currentRound || parseInt(document.getElementById('current-round')?.textContent) || 1;
+            const code = getGameCode();
+            const reqUrl = addGameCodeToUrl('/api/game/next-round');
             if (currentRound < 10) {
                 const nextRound = currentRound + 1;
-                
-                // Обновляем раунд на сервере (если endpoint доступен)
                 try {
-                    const response = await fetch('/api/game/next-round', {
-                        method: 'POST'
-                    });
-                    if (response.ok) {
-                        const data = await response.json();
-                        if (data.success) {
-                            startRound(data.current_round);
-                            return;
-                        }
+                    const response = await fetch(reqUrl, { method: 'POST' });
+                    const data = await response.json().catch(() => ({}));
+                    if (response.ok && data.success) {
+                        startRound(data.current_round);
+                        return;
                     }
                 } catch (error) {
                     console.warn('Не удалось обновить раунд на сервере (продолжаем локально):', error);
                 }
-                
-                // Если не удалось обновить на сервере, просто увеличиваем локально
                 startRound(nextRound);
+            }
+        });
+    }
+
+    // Кнопка "Начать сначала" — откат к снимку 0 (базовое состояние из админки)
+    const restartGameBtn = document.getElementById('restart-game-btn');
+    if (restartGameBtn) {
+        restartGameBtn.addEventListener('click', async () => {
+            if (!confirm('Откатить игру к начальному состоянию? Все раунды будут сброшены.')) {
+                return;
+            }
+            try {
+                const response = await fetch(addGameCodeToUrl('/api/game/rollback'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ round_number: 0 })
+                });
+                const data = await response.json().catch(() => ({}));
+                if (response.ok && data.success) {
+                    startRound(data.current_round || 1);
+                    await loadGameState();
+                } else {
+                    alert(data.detail || data.error || 'Не удалось откатить игру');
+                }
+            } catch (e) {
+                console.error('Ошибка отката:', e);
+                alert('Ошибка сети. Попробуйте ещё раз.');
             }
         });
     }
@@ -1037,9 +1473,12 @@ async function startRound(roundNumber) {
         roundElement.textContent = roundNumber;
     }
     
+    // Загружаем контент для нового раунда (до обновления на сервере)
+    await loadRoundContentForCurrentRound();
+    
     // Обновляем раунд на сервере (если endpoint доступен)
     try {
-        const response = await fetch('/api/game/set-round', {
+        const response = await fetch(addGameCodeToUrl('/api/game/set-round'), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -1053,6 +1492,7 @@ async function startRound(roundNumber) {
                 if (roundElement) {
                     roundElement.textContent = data.current_round;
                 }
+                await loadGameState();
             }
         } else {
             console.warn('Не удалось обновить раунд на сервере, продолжаем локально');
@@ -1080,6 +1520,7 @@ async function startRound(roundNumber) {
 function updateRoundControls(roundNumber) {
     const nextRoundBtn = document.getElementById('next-round-btn');
     const finalResultsBtn = document.getElementById('final-results-btn');
+    const restartGameBtn = document.getElementById('restart-game-btn');
     
     if (roundNumber < 10) {
         if (nextRoundBtn) {
@@ -1096,23 +1537,80 @@ function updateRoundControls(roundNumber) {
             finalResultsBtn.style.display = 'block';
         }
     }
+    
+    if (restartGameBtn) {
+        restartGameBtn.style.display = roundNumber >= 1 ? 'block' : 'none';
+    }
+    
+    // Обновляем видимость кнопки видео
+    updateVideoButtonVisibility();
+}
+
+async function loadGameState() {
+    try {
+        const code = getGameCode();
+        if (!code) {
+            console.error('loadGameState: код игры не найден');
+            return;
+        }
+        
+        console.log('loadGameState: загружаю состояние игры для кода', code);
+        const response = await fetch(`/api/game-state?game_code=${encodeURIComponent(code)}`);
+        
+        if (!response.ok) {
+            console.error('loadGameState: ошибка загрузки', response.status);
+            return;
+        }
+        
+        const data = await response.json();
+        console.log('loadGameState: данные получены', Object.keys(data));
+        
+        // Обновляем UI с полученными данными
+        updateUI(data);
+        
+        // Загружаем контент раунда
+        await loadRoundContentForCurrentRound();
+    } catch (error) {
+        console.error('loadGameState: ошибка', error);
+    }
 }
 
 function showScreen(screenName) {
+    console.log('showScreen: переключение на экран', screenName);
     // Скрываем все экраны
     const screens = ['start-screen', 'video-screen', 'intro-complete-screen', 'rules-screen', 'game-screen', 'final-results-screen'];
     screens.forEach(screen => {
         const el = document.getElementById(screen);
-        if (el) el.style.display = 'none';
+        if (el) {
+            el.style.display = 'none';
+            console.log('showScreen: скрыт экран', screen);
+        }
     });
     
     // Показываем нужный экран
-    const targetScreen = document.getElementById(`${screenName}-screen`);
+    const targetScreenId = `${screenName}-screen`;
+    const targetScreen = document.getElementById(targetScreenId);
     if (targetScreen) {
         targetScreen.style.display = 'block';
+        console.log('showScreen: показан экран', targetScreenId);
+    } else {
+        console.error('showScreen: экран не найден', targetScreenId);
     }
     
     gameState.currentScreen = screenName;
+    
+    // Если показываем игровой экран, сразу показываем карточки объектов (пустые), затем загружаем данные
+    if (screenName === 'game') {
+        updateBuildings([]);
+        loadGameState().catch(error => {
+            console.error('Ошибка загрузки состояния игры:', error);
+        });
+        
+        // Также обновляем видимость кнопки видео
+        setTimeout(() => {
+            updateVideoButtonVisibility();
+        }, 500); // Небольшая задержка для загрузки данных
+    }
 }
 
 // Функция для показа экрана с правилами
@@ -1129,10 +1627,8 @@ function goBackFromRules() {
 
 async function showFinalResults() {
     try {
-        const response = await fetch('/api/leaderboard');
+        const response = await fetch(addGameCodeToUrl('/api/leaderboard'));
         const data = await response.json();
-        
-        console.log('Данные от API:', data); // Для отладки
         
         if (data.error) {
             console.error('Ошибка загрузки рейтинга:', data.error);
@@ -1145,6 +1641,7 @@ async function showFinalResults() {
         }
         
         const leaderboard = data.leaderboard;
+        lastLeaderboardData = leaderboard.slice();
         const tbody = document.getElementById('final-leaderboard-body');
         if (!tbody) {
             console.error('Элемент final-leaderboard-body не найден!');
@@ -1155,6 +1652,8 @@ async function showFinalResults() {
         
         leaderboard.forEach((player, index) => {
             const row = document.createElement('tr');
+            row.classList.add('leaderboard-row-clickable');
+            row.setAttribute('data-player-index', String(index));
             
             // Прирост за раунд
             const growthRound = player.growth_round_percent || player.growth_percent || 0;
@@ -1168,13 +1667,20 @@ async function showFinalResults() {
                                    growthGame < 0 ? 'negative' : 'neutral';
             const growthGameSign = growthGame > 0 ? '+' : '';
             
+            const safePlayerName = escapeHtml(player.character_name || player.name || 'Игрок');
             row.innerHTML = `
                 <td><strong style="color: #3a2a1a;">${index + 1}</strong></td>
-                <td style="color: #3a2a1a;">${player.character_name || player.name || 'Игрок'}</td>
+                <td style="color: #3a2a1a;">${safePlayerName}</td>
                 <td style="color: #3a2a1a;">${Math.round(player.total_value)} монет</td>
                 <td class="${growthRoundClass}">${growthRoundSign}${Math.round(growthRound)}%</td>
                 <td class="${growthGameClass}">${growthGameSign}${Math.round(growthGame)}%</td>
             `;
+            
+            row.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                openPlayerModal(index);
+            });
             
             tbody.appendChild(row);
         });
@@ -1212,7 +1718,7 @@ function createPlayerCard(player, place, size) {
             ? player.character_image 
             : `/static/images/characters/${player.character_image}`)
         : '/static/images/logo.png';
-    const playerName = player.character_name || player.name || 'Игрок';
+    const playerName = escapeHtml(player.character_name || player.name || 'Игрок');
     const totalValue = player.total_value || 0;
     const growthGamePercent = player.growth_game_percent || 0;
     const growthSign = growthGamePercent > 0 ? '+' : '';
@@ -1293,6 +1799,9 @@ window.addEventListener('load', () => {
     
     // Навигация с клавиатуры для ресурсов
     document.addEventListener('keydown', (event) => {
+        if (playerModalEl && playerModalEl.style.display === 'block') {
+            return;
+        }
         if (resourceModal && resourceModal.style.display === 'block') {
             if (event.key === 'ArrowLeft') {
                 navigateToPreviousResource();
@@ -1301,6 +1810,41 @@ window.addEventListener('load', () => {
             } else if (event.key === 'Escape') {
                 resourceModal.style.display = 'none';
             }
+        }
+    });
+    
+    // Карточка игрока (турнирная таблица)
+    playerModalEl = document.getElementById('player-modal');
+    const playerModalClose = document.getElementById('player-modal-close');
+    const playerModalNavLeft = document.getElementById('player-modal-nav-left');
+    const playerModalNavRight = document.getElementById('player-modal-nav-right');
+    if (playerModalClose) {
+        playerModalClose.addEventListener('click', () => closePlayerModal());
+    }
+    if (playerModalNavLeft) {
+        playerModalNavLeft.addEventListener('click', () => navigatePlayerModal(-1));
+    }
+    if (playerModalNavRight) {
+        playerModalNavRight.addEventListener('click', () => navigatePlayerModal(1));
+    }
+    document.addEventListener('click', (event) => {
+        if (playerModalEl && event.target === playerModalEl) {
+            closePlayerModal();
+        }
+    });
+    document.addEventListener('keydown', (event) => {
+        if (!playerModalEl || playerModalEl.style.display !== 'block') {
+            return;
+        }
+        if (event.key === 'ArrowLeft') {
+            event.preventDefault();
+            navigatePlayerModal(-1);
+        } else if (event.key === 'ArrowRight') {
+            event.preventDefault();
+            navigatePlayerModal(1);
+        } else if (event.key === 'Escape') {
+            event.preventDefault();
+            closePlayerModal();
         }
     });
     
@@ -1332,13 +1876,13 @@ async function showRoundSummary(roundNumber) {
     
     try {
         // Пробуем сначала основной endpoint
-        let response = await fetch(`/api/round/${roundNumber}/summary`);
+        let response = await fetch(addGameCodeToUrl(`/api/round/${roundNumber}/summary`));
         console.log(`Ответ от основного endpoint: status=${response.status}, ok=${response.ok}`);
         
         // Если основной не работает, пробуем альтернативный
         if (!response.ok) {
             console.log('Основной endpoint не работает, пробуем альтернативный...');
-            response = await fetch(`/api/round-summary/${roundNumber}`);
+            response = await fetch(addGameCodeToUrl(`/api/round-summary/${roundNumber}`));
             console.log(`Ответ от альтернативного endpoint: status=${response.status}, ok=${response.ok}`);
         }
         
@@ -1372,6 +1916,12 @@ async function showRoundSummary(roundNumber) {
         // Заголовок
         titleEl.textContent = summary.title || `Раунд ${roundNumber}`;
         
+        // Сохраняем номер раунда для кнопки видео
+        window.currentRoundNumber = roundNumber;
+        
+        // Загружаем контент раунда (видео) и обновляем видимость кнопок
+        await loadRoundContentForCurrentRound();
+        
         // События
         eventsEl.innerHTML = '';
         if (summary.events.positive_description) {
@@ -1400,7 +1950,7 @@ async function showRoundSummary(roundNumber) {
                 
                 const name = document.createElement('div');
                 name.className = 'round-summary-item-name';
-                name.textContent = resource.name.charAt(0).toUpperCase() + resource.name.slice(1);
+                name.textContent = escapeHtml(resource.name.charAt(0).toUpperCase() + resource.name.slice(1));
                 
                 const change = document.createElement('div');
                 change.className = `round-summary-item-change ${resource.direction}`;
@@ -1430,7 +1980,7 @@ async function showRoundSummary(roundNumber) {
                 
                 const name = document.createElement('div');
                 name.className = 'round-summary-item-name';
-                name.textContent = building.name;
+                name.textContent = escapeHtml(building.name);
                 
                 const change = document.createElement('div');
                 change.className = `round-summary-item-change ${building.direction}`;
@@ -1531,5 +2081,413 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+    
+    // Закрытие модального окна видео по клику на фон
+    const videoModal = document.getElementById('round-video-modal');
+    if (videoModal) {
+        videoModal.addEventListener('click', (e) => {
+            if (e.target === videoModal) {
+                closeRoundVideo();
+            }
+        });
+        
+        // Закрытие по Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && videoModal.style.display === 'flex') {
+                closeRoundVideo();
+            }
+        });
+    }
 });
 
+
+// ========== ЗАГРУЗКА И ПОКАЗ ВИДЕО РАУНДА ==========
+
+/**
+ * Загрузить контент (видео) для раунда
+ */
+async function loadRoundContent(roundNumber) {
+    try {
+        const url = addGameCodeToUrl(`/api/round/${roundNumber}/content`);
+        const response = await fetch(url);
+        const data = response.ok ? await response.json() : null;
+        if (response.ok) {
+            if (data.success && data.content_url) {
+                window.roundContent = data;
+                console.log('Контент раунда загружен:', data);
+                return data;
+            } else {
+                console.log('Контент для раунда не найден или не настроен');
+                window.roundContent = null;
+                return null;
+            }
+        } else {
+            console.log('Контент для раунда не найден или не настроен');
+            window.roundContent = null;
+            return null;
+        }
+    } catch (error) {
+        console.error('Ошибка загрузки контента раунда:', error);
+        window.roundContent = null;
+        return null;
+    }
+}
+
+/**
+ * Загрузить контент для текущего раунда и обновить видимость кнопки
+ */
+async function loadRoundContentForCurrentRound() {
+    try {
+        const currentRoundEl = document.getElementById('current-round');
+        if (!currentRoundEl) {
+            return;
+        }
+        
+        const roundNumber = parseInt(currentRoundEl.textContent, 10);
+        if (!roundNumber || roundNumber < 1 || roundNumber > 10) {
+            return;
+        }
+        // Сохраняем номер раунда
+        window.currentRoundNumber = roundNumber;
+        
+        // Загружаем контент
+        const content = await loadRoundContent(roundNumber);
+        
+        // Обновляем видимость кнопки видео в header
+        const videoButton = document.getElementById('show-round-video-header-btn');
+        if (videoButton) {
+            if (content && content.content_url) {
+                videoButton.style.display = 'block';
+            } else {
+                videoButton.style.display = 'none';
+            }
+        }
+        
+        // Обновляем видимость кнопки в контейнере (если есть)
+        const videoButtonContainer = document.getElementById('round-video-button-container');
+        if (videoButtonContainer) {
+            const hasContent = content && content.content_url;
+            videoButtonContainer.style.display = hasContent ? 'block' : 'none';
+        }
+    } catch (error) {
+        console.error('Ошибка в loadRoundContentForCurrentRound:', error);
+        // Скрываем кнопку при ошибке
+        const videoButton = document.getElementById('show-round-video-header-btn');
+        if (videoButton) {
+            videoButton.style.display = 'none';
+        }
+    }
+}
+
+/**
+ * Показать видео раунда в модальном окне
+ */
+function showRoundVideo() {
+    const roundNumber = window.currentRoundNumber;
+    const content = window.roundContent;
+    if (roundNumber === undefined || roundNumber === null) {
+        console.error('Номер раунда не установлен');
+        return;
+    }
+    
+    if (!content || !content.content_url) {
+        alert('Видео для этого раунда не настроено');
+        return;
+    }
+    const modal = document.getElementById('round-video-modal');
+    const titleEl = document.getElementById('round-video-title');
+    const containerEl = document.getElementById('round-video-container');
+    if (!modal || !titleEl || !containerEl) {
+        console.error('Элементы модального окна видео не найдены');
+        return;
+    }
+    
+    // Для интро и раундов просто показываем модалку поверх текущего экрана (z-index 3000 > 1000)
+    // Не скрываем экран — модалка отображается поверх, как при «Показать видео раунда»
+    
+    // Устанавливаем заголовок (0 = интро)
+    titleEl.textContent = roundNumber === 0 ? 'Интро' : `Видео раунда ${roundNumber}`;
+    
+    // Очищаем контейнер
+    containerEl.innerHTML = '';
+    
+    // Определяем тип контента и создаем соответствующий элемент
+    const contentUrl = content.content_url;
+    const contentType = content.content_type || 'video';
+    
+    let videoElement;
+    
+    // Проверяем, является ли URL YouTube
+    if (isYouTubeUrl(contentUrl)) {
+        const videoId = extractYouTubeId(contentUrl);
+        if (videoId) {
+            videoElement = document.createElement('iframe');
+            videoElement.src = `https://www.youtube.com/embed/${videoId}`;
+            videoElement.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+            videoElement.allowFullscreen = true;
+            videoElement.style.width = '100%';
+            videoElement.style.height = '100%';
+            videoElement.style.minHeight = '400px';
+            videoElement.style.border = 'none';
+        } else {
+            containerEl.innerHTML = '<p style="color: #d32f2f;">Ошибка: не удалось извлечь ID видео из YouTube URL</p>';
+            modal.style.display = 'flex';
+            return;
+        }
+    }
+    // Проверяем, является ли URL Vimeo
+    else if (isVimeoUrl(contentUrl)) {
+        const videoId = extractVimeoId(contentUrl);
+        if (videoId) {
+            videoElement = document.createElement('iframe');
+            videoElement.src = `https://player.vimeo.com/video/${videoId}`;
+            videoElement.allow = 'autoplay; fullscreen; picture-in-picture';
+            videoElement.allowFullscreen = true;
+            videoElement.style.width = '100%';
+            videoElement.style.height = '100%';
+            videoElement.style.minHeight = '400px';
+            videoElement.style.border = 'none';
+        } else {
+            containerEl.innerHTML = '<p style="color: #d32f2f;">Ошибка: не удалось извлечь ID видео из Vimeo URL</p>';
+            modal.style.display = 'flex';
+            return;
+        }
+    }
+    // Проверяем, является ли URL RuTube
+    else if (isRuTubeUrl(contentUrl)) {
+        const rutube = extractRuTubeId(contentUrl);
+        if (rutube && rutube.id) {
+            videoElement = document.createElement('iframe');
+            let embedSrc = `https://rutube.ru/play/embed/${rutube.id}`;
+            if (rutube.privateKey) embedSrc += `?p=${encodeURIComponent(rutube.privateKey)}`;
+            videoElement.src = embedSrc;
+            videoElement.allow = 'autoplay; fullscreen; picture-in-picture';
+            videoElement.allowFullscreen = true;
+            videoElement.style.width = '100%';
+            videoElement.style.height = '100%';
+            videoElement.style.minHeight = '400px';
+            videoElement.style.border = 'none';
+        } else {
+            containerEl.innerHTML = '<p style="color: #d32f2f;">Ошибка: не удалось извлечь ID видео из RuTube URL</p>';
+            modal.style.display = 'flex';
+            return;
+        }
+    }
+    // Прямой URL видео (MP4, WebM и т.д.)
+    else {
+        videoElement = document.createElement('video');
+        videoElement.src = contentUrl;
+        videoElement.controls = true;
+        videoElement.autoplay = false;
+        videoElement.style.width = '100%';
+        videoElement.style.maxHeight = '70vh';
+    }
+    if (!videoElement) {
+        containerEl.innerHTML = '<p style="color: #d32f2f;">Не удалось создать плеер для этого URL</p>';
+    } else {
+        containerEl.appendChild(videoElement);
+    }
+    modal.style.display = 'flex';
+}
+
+/**
+ * Закрыть модальное окно видео
+ */
+function closeRoundVideo() {
+    const modal = document.getElementById('round-video-modal');
+    const containerEl = document.getElementById('round-video-container');
+    
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    
+    // Останавливаем и очищаем видео
+    if (containerEl) {
+        const video = containerEl.querySelector('video');
+        if (video) {
+            video.pause();
+            video.src = '';
+        }
+        const iframe = containerEl.querySelector('iframe');
+        if (iframe) {
+            iframe.src = '';
+        }
+        containerEl.innerHTML = '';
+    }
+}
+
+/**
+ * Проверить, является ли URL YouTube
+ */
+function isYouTubeUrl(url) {
+    if (!url) return false;
+    return url.includes('youtube.com') || url.includes('youtu.be');
+}
+
+/**
+ * Извлечь ID видео из YouTube URL
+ */
+function extractYouTubeId(url) {
+    if (!url) return null;
+    
+    // Формат: https://www.youtube.com/watch?v=VIDEO_ID
+    let match = url.match(/[?&]v=([^&]+)/);
+    if (match) return match[1];
+    
+    // Формат: https://youtu.be/VIDEO_ID
+    match = url.match(/youtu\.be\/([^?&]+)/);
+    if (match) return match[1];
+    
+    // Формат: https://www.youtube.com/embed/VIDEO_ID
+    match = url.match(/embed\/([^?&]+)/);
+    if (match) return match[1];
+    
+    return null;
+}
+
+/**
+ * Проверить, является ли URL Vimeo
+ */
+function isVimeoUrl(url) {
+    if (!url) return false;
+    return url.includes('vimeo.com');
+}
+
+/**
+ * Извлечь ID видео из Vimeo URL
+ */
+function extractVimeoId(url) {
+    if (!url) return null;
+    
+    // Формат: https://vimeo.com/VIDEO_ID
+    let match = url.match(/vimeo\.com\/(\d+)/);
+    if (match) return match[1];
+    
+    // Формат: https://player.vimeo.com/video/VIDEO_ID
+    match = url.match(/video\/(\d+)/);
+    if (match) return match[1];
+    
+    return null;
+}
+
+/**
+ * Проверить, является ли URL RuTube
+ */
+function isRuTubeUrl(url) {
+    if (!url) return false;
+    return url.includes('rutube.ru') || url.includes('rutube.com');
+}
+
+/**
+ * Извлечь ID видео из RuTube URL (и опционально ключ ?p= для приватных)
+ * Возвращает { id, privateKey } или null.
+ */
+function extractRuTubeId(url) {
+    if (!url) return null;
+    // Приватное видео: https://rutube.ru/video/private/HEX_ID/?p=ACCESS_KEY
+    let match = url.match(/rutube\.(ru|com)\/video\/private\/([a-f0-9]+)/i);
+    if (match) {
+        const id = match[2];
+        const pMatch = url.match(/[?&]p=([^&]+)/);
+        return { id, privateKey: pMatch ? pMatch[1] : null };
+    }
+    // Формат: https://rutube.ru/play/embed/VIDEO_ID
+    match = url.match(/rutube\.(ru|com)\/play\/embed\/([a-zA-Z0-9_-]+)/);
+    if (match) return { id: match[2], privateKey: null };
+    // Формат: https://rutube.ru/video/VIDEO_ID/ (публичное, не private)
+    match = url.match(/rutube\.(ru|com)\/video\/(?!private\/)([a-zA-Z0-9_-]+)/);
+    if (match) return { id: match[2], privateKey: null };
+    return null;
+}
+
+/**
+ * Показать события раунда из header (кнопка "События раунда")
+ */
+window.showRoundEventsFromHeader = function showRoundEventsFromHeader() {
+    const currentRoundEl = document.getElementById('current-round');
+    const roundNumber = currentRoundEl ? parseInt(currentRoundEl.textContent, 10) : 1;
+    const r = (roundNumber >= 1 && roundNumber <= 10) ? roundNumber : 1;
+    showRoundSummary(r);
+};
+
+/**
+ * Показать видео раунда из header (кнопка в правом верхнем углу)
+ */
+// Экспорт функции для использования в onclick
+window.showRoundVideoFromHeader = async function showRoundVideoFromHeader() {
+    try {
+        // Получаем текущий номер раунда
+        const currentRoundEl = document.getElementById('current-round');
+        if (!currentRoundEl) {
+            console.error('Элемент current-round не найден');
+            alert('Не удалось определить номер раунда');
+            return;
+        }
+        
+        const roundNumber = parseInt(currentRoundEl.textContent, 10);
+        if (!roundNumber || roundNumber < 1 || roundNumber > 10) {
+            alert('Некорректный номер раунда');
+            return;
+        }
+        // Сохраняем номер раунда
+        window.currentRoundNumber = roundNumber;
+        
+        // Загружаем контент раунда
+        const content = await loadRoundContent(roundNumber);
+        
+        // Проверяем, есть ли контент
+        if (!content || !content.content_url) {
+            alert('Видео для этого раунда не настроено');
+            return;
+        }
+        
+        // Показываем видео
+        showRoundVideo();
+    } catch (error) {
+        console.error('Ошибка при показе видео раунда:', error);
+        alert('Ошибка при загрузке видео. Попробуйте позже.');
+    }
+}
+
+/**
+ * Обновить видимость кнопки видео в header
+ */
+async function updateVideoButtonVisibility() {
+    try {
+        const videoButton = document.getElementById('show-round-video-header-btn');
+        if (!videoButton) return;
+        
+        // Получаем текущий номер раунда
+        const currentRoundEl = document.getElementById('current-round');
+        if (!currentRoundEl) {
+            videoButton.style.display = 'none';
+            return;
+        }
+        
+        const roundNumber = parseInt(currentRoundEl.textContent, 10);
+        if (!roundNumber || roundNumber < 1 || roundNumber > 10) {
+            videoButton.style.display = 'none';
+            return;
+        }
+        
+        // Если контент еще не загружен или раунд изменился, загружаем его
+        if (!window.roundContent || window.currentRoundNumber !== roundNumber) {
+            await loadRoundContent(roundNumber);
+        }
+        
+        // Показываем кнопку, если есть контент
+        const content = window.roundContent;
+        if (content && content.content_url) {
+            videoButton.style.display = 'block';
+        } else {
+            videoButton.style.display = 'none';
+        }
+    } catch (error) {
+        console.error('Ошибка в updateVideoButtonVisibility:', error);
+        // Скрываем кнопку при ошибке
+        const videoButton = document.getElementById('show-round-video-header-btn');
+        if (videoButton) {
+            videoButton.style.display = 'none';
+        }
+    }
+}
