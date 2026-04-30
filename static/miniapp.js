@@ -1009,8 +1009,7 @@ function updateResources() {
         const priceValue = price ? price.current_price : 0;
         const totalValue = amount * priceValue;
         // На странице портфеля — иконки из design/icons
-        const imageFile = resourceImages[resource] || resource + '.png';
-        const imagePath = '/design/icons/' + imageFile;
+        const imagePath = miniappResourceIconUrl(resource);
         
         const resourceItem = document.createElement('div');
         resourceItem.className = 'resource-item portfolio-resource-row';
@@ -1073,7 +1072,7 @@ function updateBuildings() {
     // По одной строке на каждый экземпляр объекта
     buildingsVisible.forEach(b => {
         const statusText = getStatusText(b.status);
-        const portfolioBuildingIconPath = '/design/icons/' + b.name + '.png';
+        const portfolioBuildingIconPath = miniappBuildingIconUrlForName(b.name);
         const buildingItem = document.createElement('div');
         buildingItem.className = 'building-item portfolio-building-row';
         buildingItem.style.cursor = 'pointer';
@@ -1134,12 +1133,17 @@ function initializeScreens() {
     }
 }
 
+/** Файл в design/icons с URL-encoding (корректно на Linux и в Telegram WebView). */
+function miniappDesignIconsUrl(filename) {
+    return '/design/icons/' + encodeURIComponent(filename);
+}
+
 // Пути иконок меню (design/icons): активная и неактивная версия для каждого раздела
 const NAV_ICONS = {
-    portfolio: { active: '/design/icons/Портфель.png', inactive: '/design/icons/Портфель(1).png' },
-    market: { active: '/design/icons/Биржа.png', inactive: '/design/icons/Биржа(1).png' },
-    leaderboard: { active: '/design/icons/Рейтинг.png', inactive: '/design/icons/Рейтинг(1).png' },
-    settings: { active: '/design/icons/Настройки.png', inactive: '/design/icons/Настройки(1).png' }
+    portfolio: { active: miniappDesignIconsUrl('Портфель.png'), inactive: miniappDesignIconsUrl('Портфель(1).png') },
+    market: { active: miniappDesignIconsUrl('Биржа.png'), inactive: miniappDesignIconsUrl('Биржа(1).png') },
+    leaderboard: { active: miniappDesignIconsUrl('Рейтинг.png'), inactive: miniappDesignIconsUrl('Рейтинг(1).png') },
+    settings: { active: miniappDesignIconsUrl('Настройки.png'), inactive: miniappDesignIconsUrl('Настройки(1).png') }
 };
 
 function updateNavIcons(activeScreenName) {
@@ -1312,8 +1316,23 @@ function updateLeaderboard(leaderboard) {
 
 function miniappBuildingIconUrlForName(buildingName) {
     if (!buildingName) return '';
-    return '/design/icons/' + encodeURIComponent(buildingName) + '.png';
+    return miniappDesignIconsUrl(buildingName + '.png');
 }
+
+/** Имена файлов в design/картинки для веба (регистр как на диске, Linux case-sensitive). */
+const MINIAPP_BUILDING_WEB_FILES = {
+    'Лесоповал': 'лесоповал.png',
+    'Каменоломня': 'каменоломня.png',
+    'Рыболовня': 'рыболовня.png',
+    'Трактир': 'Трактир.png',
+    'Теплицы': 'теплицы.png',
+    'Посевные поля': 'Посевные поля.png',
+    'Ферма': 'ферма.png',
+    'Постоялый двор': 'постоялый двор.png',
+    'Кузнечная': 'кузнечная.png',
+    'Золотой рудник': 'золотой рудник.png',
+    'Куртизанские палатки': 'куртизанские палатки.png'
+};
 
 /** Картинки карточек объектов на бирже: design/картинки для карточек объектов/<имя в нижнем регистре> (1).png */
 function miniappMarketBuildingCardImageUrl(buildingName) {
@@ -1323,11 +1342,11 @@ function miniappMarketBuildingCardImageUrl(buildingName) {
     return '/design/' + encodeURIComponent(dir) + '/' + encodeURIComponent(file);
 }
 
-/** Страница объекта на бирже: design/картинки для веба/<название объекта>.png */
+/** Страница объекта на бирже / портфеле: design/картинки для веба/… */
 function miniappMarketBuildingWebImageUrl(buildingName) {
     if (!buildingName) return '';
     const dir = 'картинки для веба';
-    const file = buildingName + '.png';
+    const file = MINIAPP_BUILDING_WEB_FILES[buildingName] || (buildingName + '.png');
     return '/design/' + encodeURIComponent(dir) + '/' + encodeURIComponent(file);
 }
 
@@ -1501,8 +1520,7 @@ function updatePrices() {
         const changeGameClass = price.change_from_start_percent >= 0 ? 'positive' : 'negative';
         const changeGameSign = price.change_from_start_percent >= 0 ? '+' : '';
         
-        const imageFile = resourceImages[price.resource] || price.resource + '.png';
-        const iconPath = '/design/icons/' + imageFile;
+        const iconPath = miniappResourceIconUrl(price.resource);
         item.style.cursor = 'pointer';
         item.onclick = () => showResourceScreen(price.resource);
         item.innerHTML = `
@@ -1600,8 +1618,7 @@ async function showResourceScreen(resourceName) {
         document.getElementById('resource-screen-name').textContent = capitalizeFirst(resourceName);
         
         // Картинка
-        const imageFile = resourceImages[resourceName] || `${resourceName}.png`;
-        const imagePath = `/static/images/resources/${imageFile}`;
+        const imagePath = miniappResourceIconUrl(resourceName);
         const imageEl = document.getElementById('resource-screen-image');
         imageEl.src = imagePath;
         imageEl.alt = capitalizeFirst(resourceName);
@@ -1830,8 +1847,7 @@ function showBuyResourceScreen() {
     document.getElementById('buy-resource-screen-name').textContent = `Купить ${capitalizeFirst(currentResource)}`;
     
     // Картинка
-    const imageFile = resourceImages[currentResource] || `${currentResource}.png`;
-    const imagePath = `/static/images/resources/${imageFile}`;
+    const imagePath = miniappResourceIconUrl(currentResource);
     const imageEl = document.getElementById('buy-resource-image');
     imageEl.src = imagePath;
     imageEl.alt = capitalizeFirst(currentResource);
@@ -1883,8 +1899,7 @@ function showSellResourceScreen() {
     document.getElementById('sell-resource-screen-name').textContent = `Продать ${capitalizeFirst(currentResource)}`;
     
     // Картинка
-    const imageFile = resourceImages[currentResource] || `${currentResource}.png`;
-    const imagePath = `/static/images/resources/${imageFile}`;
+    const imagePath = miniappResourceIconUrl(currentResource);
     const imageEl = document.getElementById('sell-resource-image');
     imageEl.src = imagePath;
     imageEl.alt = capitalizeFirst(currentResource);
@@ -2087,21 +2102,6 @@ function goBackFromSellResource() {
     showScreen('resource', { restoreScroll: true });
 }
 
-// Маппинг изображений объектов (глобальный)
-const buildingImages = {
-    'Лесоповал': '/static/images/buildings/лесоповал.png',
-    'Каменоломня': '/static/images/buildings/каменоломня.png',
-    'Рыболовня': '/static/images/buildings/рыболовня.png',
-    'Трактир': '/static/images/buildings/Трактир.png',
-    'Теплицы': '/static/images/buildings/теплицы.png',
-    'Посевные поля': '/static/images/buildings/Посевные поля.png',
-    'Ферма': '/static/images/buildings/ферма.png',
-    'Постоялый двор': '/static/images/buildings/постоялый двор.png',
-    'Куртизанские палатки': '/static/images/buildings/куртизанские палатки.png',
-    'Кузнечная': '/static/images/buildings/кузнечная.png',
-    'Золотой рудник': '/static/images/buildings/золотой рудник.png'
-};
-
 // Показ страницы объекта из портфеля
 async function showPortfolioBuildingScreen(buildingName, buildingStatus, buildingId) {
     currentBuilding = buildingName;
@@ -2143,7 +2143,7 @@ async function showPortfolioBuildingScreen(buildingName, buildingStatus, buildin
         document.getElementById('portfolio-building-screen-name').textContent = buildingName;
         
         // Картинка
-        const imagePath = buildingImages[buildingName] || '';
+        const imagePath = miniappMarketBuildingWebImageUrl(buildingName);
         const imageEl = document.getElementById('portfolio-building-image');
         imageEl.src = imagePath;
         imageEl.alt = buildingName;
@@ -2516,7 +2516,7 @@ async function showBuildBuildingScreenFromMarket() {
         document.getElementById('build-building-screen-name').textContent = `Построить ${currentBuilding}`;
         
         // Картинка
-        const imagePath = buildingImages[currentBuilding] || '';
+        const imagePath = miniappMarketBuildingWebImageUrl(currentBuilding);
         const imageEl = document.getElementById('build-building-image');
         imageEl.src = imagePath;
         imageEl.alt = currentBuilding;
@@ -2586,7 +2586,7 @@ async function showSellBuildingScreenFromMarket() {
         document.getElementById('sell-building-screen-name').textContent = `Продать ${currentBuilding}`;
         
         // Картинка
-        const imagePath = buildingImages[currentBuilding] || '';
+        const imagePath = miniappMarketBuildingWebImageUrl(currentBuilding);
         const imageEl = document.getElementById('sell-building-image');
         imageEl.src = imagePath;
         imageEl.alt = currentBuilding;
@@ -3011,18 +3011,23 @@ function showToast(message, type = 'success') {
     }, 3000);
 }
 
-// Маппинг изображений ресурсов
+// Маппинг изображений ресурсов (имена файлов как в design/icons/, регистр для Linux)
 const resourceImages = {
-    'камень': 'камень.png',
-    'дерево': 'дерево.png',
-    'железо': 'железо.png',
-    'скот': 'скот.png',
-    'овощи': 'овощи.png',
-    'рабы': 'рабы.png',
-    'золото': 'золото.png',
-    'зерно': 'зерно.png',
-    'рыба': 'рыба.png'
+    'камень': 'Камень.png',
+    'дерево': 'Дерево.png',
+    'железо': 'Железо.png',
+    'скот': 'Скот.png',
+    'овощи': 'Овощи.png',
+    'рабы': 'Рабы.png',
+    'золото': 'Золото.png',
+    'зерно': 'Зерно.png',
+    'рыба': 'Рыба.png'
 };
+
+function miniappResourceIconUrl(resourceKey) {
+    const file = resourceImages[resourceKey] || (resourceKey + '.png');
+    return miniappDesignIconsUrl(file);
+}
 
 function capitalizeFirst(str) {
     return str.charAt(0).toUpperCase() + str.slice(1);
