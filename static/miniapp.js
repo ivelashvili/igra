@@ -1138,6 +1138,15 @@ function miniappDesignIconsUrl(filename) {
     return '/design/icons/' + encodeURIComponent(filename);
 }
 
+/** Иконка ресурса — как на веб-проекторе (script.js): первая буква заглавная + .png, ключ нормализуем. */
+function miniappResourceIconUrl(resourceKey) {
+    if (resourceKey == null || resourceKey === '') return '';
+    const r = String(resourceKey).trim().toLowerCase();
+    if (!r) return '';
+    const resourceIconName = r.charAt(0).toUpperCase() + r.slice(1) + '.png';
+    return miniappDesignIconsUrl(resourceIconName);
+}
+
 // Пути иконок меню (design/icons): активная и неактивная версия для каждого раздела
 const NAV_ICONS = {
     portfolio: { active: miniappDesignIconsUrl('Портфель.png'), inactive: miniappDesignIconsUrl('Портфель(1).png') },
@@ -3009,24 +3018,6 @@ function showToast(message, type = 'success') {
     setTimeout(() => {
         toast.classList.remove('show');
     }, 3000);
-}
-
-// Маппинг изображений ресурсов (имена файлов как в design/icons/, регистр для Linux)
-const resourceImages = {
-    'камень': 'Камень.png',
-    'дерево': 'Дерево.png',
-    'железо': 'Железо.png',
-    'скот': 'Скот.png',
-    'овощи': 'Овощи.png',
-    'рабы': 'Рабы.png',
-    'золото': 'Золото.png',
-    'зерно': 'Зерно.png',
-    'рыба': 'Рыба.png'
-};
-
-function miniappResourceIconUrl(resourceKey) {
-    const file = resourceImages[resourceKey] || (resourceKey + '.png');
-    return miniappDesignIconsUrl(file);
 }
 
 function capitalizeFirst(str) {

@@ -59,7 +59,8 @@ body {
     background-image: url('/static/images/background.jpeg');
     background-size: cover;
     background-position: center;
-    background-attachment: fixed;
+    /* scroll: в Telegram WebView fixed часто даёт отсутствие фона (чёрный экран); на десктопе визуально почти без отличий */
+    background-attachment: scroll;
     background-repeat: no-repeat;
     color: #3a2a1a;
     min-height: 100vh;
