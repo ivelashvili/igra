@@ -51,33 +51,39 @@
  */
 html {
     font-size: clamp(13px, 1.5vw + 11px, 18px);
+    min-height: 100%;
+    /* Подложка, если в WebView не дорисуется слой с картинкой */
+    background-color: #1c1810;
+}
+
+/* Отдельный fixed-слой: в Telegram / мобильных WebView фон на body + ::before с z-index:-1 часто не рисуется */
+.app-background {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image: url('/static/images/background.jpeg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+.app-background::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(28, 24, 16, 0.7);
 }
 
 body {
     font-family: 'Noto Sans', sans-serif;
     font-size: 1.25em;
-    background-image: url('/static/images/background.jpeg');
-    background-size: cover;
-    background-position: center;
-    /* scroll: в Telegram WebView fixed часто даёт отсутствие фона (чёрный экран); на десктопе визуально почти без отличий */
-    background-attachment: scroll;
-    background-repeat: no-repeat;
     color: #3a2a1a;
     min-height: 100vh;
+    min-height: 100dvh;
     padding: 10px;
     position: relative;
     overflow-y: auto;
-}
-
-body::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(28, 24, 16, 0.7);
-    z-index: -1;
 }
 
 .container {
