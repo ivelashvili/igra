@@ -1,28 +1,28 @@
-/* Noto Sans — основной шрифт и цифры */
+/* San Francisco — основной UI (repl. Noto Sans / Anticva); файл: design/San Francisco.ttf */
 @font-face {
-    font-family: 'Noto Sans';
-    src: url('/design/Noto%20Sans/NotoSans-Regular.ttf') format('truetype');
+    font-family: 'San Francisco';
+    src: url('/design/San%20Francisco.ttf') format('truetype');
     font-weight: normal;
     font-style: normal;
     font-display: swap;
 }
 @font-face {
-    font-family: 'Noto Sans';
-    src: url('/design/Noto%20Sans/NotoSans-Bold.ttf') format('truetype');
+    font-family: 'San Francisco';
+    src: url('/design/San%20Francisco.ttf') format('truetype');
     font-weight: bold;
     font-style: normal;
     font-display: swap;
 }
 @font-face {
-    font-family: 'Noto Sans';
-    src: url('/design/Noto%20Sans/NotoSans-Italic.ttf') format('truetype');
+    font-family: 'San Francisco';
+    src: url('/design/San%20Francisco.ttf') format('truetype');
     font-weight: normal;
     font-style: italic;
     font-display: swap;
 }
 @font-face {
-    font-family: 'Noto Sans';
-    src: url('/design/Noto%20Sans/NotoSans-BoldItalic.ttf') format('truetype');
+    font-family: 'San Francisco';
+    src: url('/design/San%20Francisco.ttf') format('truetype');
     font-weight: bold;
     font-style: italic;
     font-display: swap;
@@ -35,6 +35,11 @@
     font-weight: normal;
     font-style: normal;
     font-display: swap;
+}
+
+/* Единая тень для золотых заголовков (шапка «Королевская биржа», «Мои ресурсы/объекты» и др. .section h2) */
+:root {
+    --miniapp-gold-title-text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
 }
 
 * {
@@ -76,7 +81,7 @@ html {
 }
 
 body {
-    font-family: 'Noto Sans', sans-serif;
+    font-family: 'San Francisco', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 1.25em;
     color: #3a2a1a;
     min-height: 100vh;
@@ -282,11 +287,24 @@ body {
 }
 
 .player-name {
-    font-family: 'Noto Sans', sans-serif;
+    font-family: 'San Francisco', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 0.95em;
     font-weight: normal;
     margin-bottom: 5px;
     color: #3a2a1a;
+}
+
+/* Общий блок: шапка, профиль, баланс — на всех вкладках; прокручивается вместе со страницей (без overlay под скроллом) */
+.miniapp-sticky-app-top {
+    margin-bottom: 0;
+}
+.miniapp-global-balance-card.portfolio-balance-card {
+    margin-left: 16px;
+    margin-right: 16px;
+    margin-top: 0;
+    margin-bottom: 10px;
+    /* не дублируем полосы .section под блоком профиля */
+    border-bottom: none;
 }
 
 /* Portfolio: header as card */
@@ -303,7 +321,7 @@ body {
     font-size: clamp(1.1rem, 5vw, 2.25em);
     font-weight: normal;
     color: #d4af37;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8), 0 0 15px rgba(212, 175, 55, 0.3);
+    text-shadow: var(--miniapp-gold-title-text-shadow);
     margin: 0;
     letter-spacing: 0.02em;
     white-space: nowrap;
@@ -391,7 +409,7 @@ body {
     color: #3d1518;
 }
 .portfolio-growth-value {
-    font-family: 'Noto Sans', sans-serif;
+    font-family: 'San Francisco', -apple-system, BlinkMacSystemFont, sans-serif;
     font-weight: bold;
     font-size: 0.95em;
     color: inherit;
@@ -418,7 +436,7 @@ body {
     font-weight: bold;
 }
 .portfolio-balance-value {
-    font-family: 'Noto Sans', sans-serif;
+    font-family: 'San Francisco', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 1em;
     font-weight: bold;
     color: #3a2a1a;
@@ -441,7 +459,8 @@ body {
     text-align: left;
     border: none;
     padding: 0;
-    text-shadow: none;
+    /* Та же тень, что у .section h2 (перекрывает более слабое каскадное правило без дублирования цифр) */
+    text-shadow: var(--miniapp-gold-title-text-shadow);
 }
 /* Переопределяем .section h2: заголовки «мои ресурсы» и «мои объекты» — 1em */
 .portfolio-card .portfolio-card-title {
@@ -562,7 +581,7 @@ body {
 }
 
 .capitalization-value {
-    font-family: 'Noto Sans', sans-serif;
+    font-family: 'San Francisco', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 3.125em;
     font-weight: normal;
     color: #d4af37;
@@ -570,7 +589,7 @@ body {
 }
 
 .capitalization-label {
-    font-family: 'Noto Sans', sans-serif;
+    font-family: 'San Francisco', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 0.65em;
     color: #c9a961;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
@@ -604,7 +623,7 @@ body {
 }
 
 .growth-value {
-    font-family: 'Noto Sans', sans-serif;
+    font-family: 'San Francisco', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 1em;
     font-weight: bold;
     color: #1a5a1a;
@@ -646,7 +665,7 @@ body {
     font-size: 1.75em;
     margin-bottom: 15px;
     color: #d4af37;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+    text-shadow: var(--miniapp-gold-title-text-shadow);
     text-align: center;
     border-bottom: 2px solid #8b4513;
     padding-bottom: 8px;
@@ -744,7 +763,7 @@ body {
 }
 
 .resource-amount {
-    font-family: 'Noto Sans', sans-serif;
+    font-family: 'San Francisco', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 1em;
     color: #3a2a1a;
     font-weight: bold;
@@ -871,7 +890,7 @@ body {
 }
 
 .building-count {
-    font-family: 'Noto Sans', sans-serif;
+    font-family: 'San Francisco', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 1em;
     color: #3a2a1a;
     font-weight: bold;
@@ -908,7 +927,7 @@ body {
 }
 
 .price-value {
-    font-family: 'Noto Sans', sans-serif;
+    font-family: 'San Francisco', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 1.625em;
     color: #d4af37;
     font-weight: bold;
@@ -1062,7 +1081,7 @@ body {
     font-size: 1.25em;
     background: rgba(255, 255, 255, 0.9);
     color: #333;
-    font-family: 'Noto Sans', sans-serif;
+    font-family: 'San Francisco', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .close {
@@ -1141,7 +1160,7 @@ body {
     margin-top: 10px;
     background: rgba(255, 255, 255, 0.9);
     color: #333;
-    font-family: 'Noto Sans', sans-serif;
+    font-family: 'San Francisco', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .confirm-btn {
@@ -1259,47 +1278,111 @@ body {
     background: rgba(139, 69, 19, 0.2);
     border: 2px solid #8b4513;
     border-radius: 8px;
-    padding: 12px 15px;
+    padding: 0;
     display: flex;
-    align-items: center;
-    gap: 15px;
+    align-items: stretch;
+    gap: 0;
     backdrop-filter: blur(3px);
+    overflow: hidden;
+    min-height: 92px;
 }
 
-.leaderboard-rank {
-    font-family: 'Noto Sans', sans-serif;
-    font-size: 1.5em;
+.leaderboard-avatar-cell {
+    flex: 0 0 76px;
+    width: 76px;
+    align-self: stretch;
+    overflow: hidden;
+    background: rgba(101, 67, 33, 0.35);
+    position: relative;
+    border-top-right-radius: 10px;
+    border-bottom-right-radius: 10px;
+}
+
+.leaderboard-avatar {
+    display: none;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.leaderboard-avatar-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    min-height: 92px;
+    font-family: 'San Francisco', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 1.85em;
     font-weight: bold;
     color: #d4af37;
-    min-width: 40px;
-    text-align: center;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+    text-shadow: var(--miniapp-gold-title-text-shadow, 1px 1px 2px rgba(0, 0, 0, 0.8));
 }
 
 .leaderboard-info {
     flex: 1;
     min-width: 0;
+    padding: 10px 10px 10px 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.leaderboard-name-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 2px;
 }
 
 .leaderboard-name {
+    flex: 1;
+    min-width: 0;
     font-weight: bold;
     color: #3a2a1a;
-    font-size: 0.65em;
-    margin-bottom: 3px;
+    font-size: 0.72em;
+    line-height: 1.2;
+}
+
+.leaderboard-arrow-slot {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .leaderboard-capitalization {
-    font-family: 'Noto Sans', sans-serif;
-    font-size: 1em;
-    color: #c9a961;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
-    margin-bottom: 5px;
+    font-family: 'San Francisco', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 1.08em;
+    font-weight: bold;
+    color: #d4af37;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.55);
+    margin-bottom: 4px;
+    line-height: 1.2;
+}
+
+.leaderboard-rank-side {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 22px 6px 8px;
+    align-self: stretch;
+}
+
+.leaderboard-rank-number {
+    font-family: 'San Francisco', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: clamp(1.6rem, 6vw, 2.35rem);
+    font-weight: bold;
+    color: #d4af37;
+    line-height: 1;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.55);
 }
 
 .leaderboard-growth {
     display: flex;
     gap: 6px;
-    margin-top: 5px;
+    margin-top: 2px;
 }
 
 .leaderboard-growth-box {
@@ -1324,7 +1407,7 @@ body {
 }
 
 .leaderboard-growth-value {
-    font-family: 'Noto Sans', sans-serif;
+    font-family: 'San Francisco', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 0.65em;
     font-weight: bold;
     color: #1a5a1a;
@@ -1336,13 +1419,6 @@ body {
 
 .leaderboard-growth-box.negative .leaderboard-growth-value {
     color: #3a0f0f;
-}
-
-.leaderboard-arrow-container {
-    min-width: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
 }
 
 .leaderboard-arrow {
@@ -1597,14 +1673,14 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-family: 'Anticva', serif;
+    font-family: 'San Francisco', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: clamp(2.5rem, 18vw, 4rem);
     color: #3a2a1a;
     background: rgba(139, 90, 43, 0.25);
 }
 
 .miniapp-player-modal-rank-num {
-    font-family: 'Anticva', serif;
+    font-family: 'San Francisco', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: clamp(1.5rem, 8vw, 2.25rem);
     font-weight: bold;
     color: #d4af37;
@@ -1613,7 +1689,7 @@ body {
 }
 
 .miniapp-player-modal-rank-label {
-    font-family: 'Anticva', serif;
+    font-family: 'San Francisco', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 0.95em;
     color: #d4af37;
     font-weight: bold;
@@ -1632,7 +1708,7 @@ body {
 }
 
 .miniapp-player-modal-name {
-    font-family: 'Anticva', serif;
+    font-family: 'San Francisco', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: clamp(1.38rem, 5.4vw, 1.74rem);
     font-weight: bold;
     color: #3a2a1a;
@@ -1657,7 +1733,7 @@ body {
     display: inline-block;
     padding: calc(8px * 0.85) 18px;
     border-radius: 999px;
-    font-family: 'Noto Sans', sans-serif;
+    font-family: 'San Francisco', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 0.95em;
     font-weight: 800;
 }
@@ -1687,7 +1763,7 @@ body {
 
 /* Как .capitalization-value в карточке под шапкой (.portfolio-character-card .capitalization-value) */
 .miniapp-player-modal-money-value {
-    font-family: 'Noto Sans', sans-serif;
+    font-family: 'San Francisco', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 1.5em;
     font-weight: normal;
     color: #d4af37;
@@ -1696,7 +1772,7 @@ body {
 
 /* Как .capitalization-label («монет») в шапке */
 .miniapp-player-modal-money-suffix {
-    font-family: 'Noto Sans', sans-serif;
+    font-family: 'San Francisco', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 0.65em;
     font-weight: normal;
     color: #c9a961;
@@ -1705,7 +1781,7 @@ body {
 
 /* Как .building-name в блоке «мои объекты» */
 .miniapp-player-modal-owns-title {
-    font-family: 'Noto Sans', sans-serif;
+    font-family: 'San Francisco', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 0.65em;
     font-weight: bold;
     color: #3a2a1a;
@@ -1747,7 +1823,7 @@ body {
 .miniapp-player-modal-building-name {
     flex: 1;
     min-width: 0;
-    font-family: 'Noto Sans', sans-serif;
+    font-family: 'San Francisco', -apple-system, BlinkMacSystemFont, sans-serif;
     font-weight: bold;
     color: #3a2a1a;
     font-size: 0.65em;
@@ -1756,7 +1832,7 @@ body {
 .miniapp-player-modal-buildings-list li.miniapp-player-modal-buildings-empty {
     justify-content: center;
     border: none;
-    font-family: 'Noto Sans', sans-serif;
+    font-family: 'San Francisco', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 0.65em;
     font-weight: 600;
     color: #4a3a2a;
@@ -1940,7 +2016,7 @@ body {
 }
 
 .resource-screen-stat-value {
-    font-family: 'Noto Sans', sans-serif;
+    font-family: 'San Francisco', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 1em;
     font-weight: bold;
     color: #d4af37;
@@ -2167,7 +2243,7 @@ body {
 
 .buy-resource-price-value,
 .sell-resource-price-value {
-    font-family: 'Noto Sans', sans-serif;
+    font-family: 'San Francisco', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 1.5em;
     font-weight: bold;
     color: #d4af37;
@@ -2199,7 +2275,7 @@ body {
 
 .buy-resource-available-value,
 .sell-resource-available-value {
-    font-family: 'Noto Sans', sans-serif;
+    font-family: 'San Francisco', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 1.25em;
     font-weight: bold;
     color: #3a2a1a;
@@ -2225,7 +2301,7 @@ body {
 
 .buy-resource-money-value,
 .sell-resource-money-value {
-    font-family: 'Noto Sans', sans-serif;
+    font-family: 'San Francisco', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 1.25em;
     font-weight: bold;
     color: #d4af37;
@@ -2322,7 +2398,7 @@ body {
 
 .buy-resource-total-value,
 .sell-resource-total-value {
-    font-family: 'Noto Sans', sans-serif;
+    font-family: 'San Francisco', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 1.875em;
     font-weight: bold;
     color: #d4af37;
@@ -3078,7 +3154,7 @@ body {
 }
 
 .market-building-count-value {
-    font-family: 'Noto Sans', sans-serif;
+    font-family: 'San Francisco', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 1.5em;
     font-weight: bold;
     color: #d4af37;
@@ -3840,7 +3916,7 @@ body {
 }
 
 .sell-building-price-value {
-    font-family: 'Noto Sans', sans-serif;
+    font-family: 'San Francisco', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 1.25em;
     font-weight: bold;
     color: #3a2a1a;
@@ -4137,7 +4213,7 @@ body {
     width: 100%;
     margin: 15px 0 20px;
     padding: 14px 16px;
-    font-family: 'Noto Sans', sans-serif;
+    font-family: 'San Francisco', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 0.65em;
     font-weight: bold;
     color: #3a2a1a;
@@ -4175,7 +4251,7 @@ body {
     box-sizing: border-box;
 }
 .rules-container h1 {
-    font-family: 'Noto Sans', sans-serif;
+    font-family: 'San Francisco', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 0.95em;
     font-weight: bold;
     color: #3a2a1a;
@@ -4205,7 +4281,7 @@ body {
     padding-bottom: 0;
 }
 .rules-section h2 {
-    font-family: 'Noto Sans', sans-serif;
+    font-family: 'San Francisco', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 0.72em;
     font-weight: bold;
     color: #4a3628;
@@ -4215,7 +4291,7 @@ body {
 }
 .rules-section p,
 .rules-section ul {
-    font-family: 'Noto Sans', sans-serif;
+    font-family: 'San Francisco', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 0.68em;
     margin: 0 0 8px;
     text-align: left;
@@ -4325,7 +4401,7 @@ body {
 }
 
 .resource-market-change-value {
-    font-family: 'Noto Sans', sans-serif;
+    font-family: 'San Francisco', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 0.65em;
     font-weight: bold;
     color: #1a5a1a;
@@ -4340,7 +4416,7 @@ body {
 }
 
 .resource-market-price {
-    font-family: 'Noto Sans', sans-serif;
+    font-family: 'San Francisco', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 1em;
     font-weight: bold;
     color: #d4af37;
@@ -4556,7 +4632,7 @@ body {
     font-weight: bold;
     cursor: pointer;
     transition: background 0.2s;
-    font-family: 'Noto Sans', sans-serif;
+    font-family: 'San Francisco', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .character-card-select-btn:hover {
@@ -4636,7 +4712,7 @@ body {
     font-size: 0.65em;
     cursor: pointer;
     transition: background 0.2s, transform 0.2s;
-    font-family: 'Noto Sans', sans-serif;
+    font-family: 'San Francisco', -apple-system, BlinkMacSystemFont, sans-serif;
     font-weight: bold;
 }
 
@@ -4732,7 +4808,7 @@ body {
     border-radius: 12px;
     background: rgba(255, 255, 255, 0.9);
     color: #3a2a1a;
-    font-family: 'Noto Sans', sans-serif;
+    font-family: 'San Francisco', -apple-system, BlinkMacSystemFont, sans-serif;
     font-weight: bold;
     letter-spacing: 8px;
     transition: border-color 0.3s, box-shadow 0.3s;
@@ -4769,7 +4845,7 @@ body {
     font-weight: bold;
     cursor: pointer;
     transition: background 0.3s, transform 0.2s, box-shadow 0.3s;
-    font-family: 'Noto Sans', sans-serif;
+    font-family: 'San Francisco', -apple-system, BlinkMacSystemFont, sans-serif;
     color: white;
 }
 

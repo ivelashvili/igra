@@ -1262,6 +1262,13 @@ async function loadLeaderboard() {
 
 // Обновление рейтинга
 function updateLeaderboard(leaderboard) {
+    function esc(s) {
+        return String(s == null ? '' : s)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+    }
+
     const list = document.getElementById('leaderboard-list');
     list.innerHTML = '';
     miniappLeaderboardCache = Array.isArray(leaderboard) ? leaderboard.slice() : [];
@@ -1273,6 +1280,9 @@ function updateLeaderboard(leaderboard) {
 
     leaderboard.forEach((player, index) => {
         const rank = index + 1;
+        const displayName = player.character_name || player.nickname || player.name || 'Игрок';
+        const initialLetter = (displayName.trim().charAt(0) || '?').toUpperCase();
+
         const playerItem = document.createElement('div');
         playerItem.className = 'leaderboard-item leaderboard-item--clickable';
         playerItem.setAttribute('role', 'button');
@@ -1284,8 +1294,7 @@ function updateLeaderboard(leaderboard) {
                 openMiniappPlayerModal(index);
             }
         });
-        
-        // Определяем стрелочку
+
         let arrowHtml = '';
         if (player.rank_change === 'up') {
             arrowHtml = '<span class="leaderboard-arrow leaderboard-arrow-up">↑</span>';
@@ -1294,17 +1303,22 @@ function updateLeaderboard(leaderboard) {
         } else {
             arrowHtml = '<span class="leaderboard-arrow-empty"></span>';
         }
-        
-        // Формируем HTML для роста капитализации
+
         const growthRound = player.growth_round_percent || 0;
         const growthGame = player.growth_game_percent || 0;
         const growthRoundClass = growthRound >= 0 ? 'positive' : 'negative';
         const growthGameClass = growthGame >= 0 ? 'positive' : 'negative';
-        
+
         playerItem.innerHTML = `
-            <div class="leaderboard-rank">${rank}</div>
+            <div class="leaderboard-avatar-cell" aria-hidden="true">
+                <img class="leaderboard-avatar" alt="" />
+                <div class="leaderboard-avatar-fallback">${esc(initialLetter)}</div>
+            </div>
             <div class="leaderboard-info">
-                <div class="leaderboard-name">${player.character_name || player.nickname || player.name || 'Игрок'}</div>
+                <div class="leaderboard-name-row">
+                    <div class="leaderboard-name">${esc(displayName)}</div>
+                    <div class="leaderboard-arrow-slot">${arrowHtml}</div>
+                </div>
                 <div class="leaderboard-capitalization">${Math.round(player.total_value || 0).toLocaleString('ru-RU')}</div>
                 <div class="leaderboard-growth">
                     <div class="leaderboard-growth-box ${growthRoundClass}">
@@ -1315,10 +1329,37 @@ function updateLeaderboard(leaderboard) {
                     </div>
                 </div>
             </div>
-            <div class="leaderboard-arrow-container">
-                ${arrowHtml}
+            <div class="leaderboard-rank-side">
+                <span class="leaderboard-rank-number">${rank}</span>
             </div>
         `;
+
+        const avatarImg = playerItem.querySelector('.leaderboard-avatar');
+        const avatarFb = playerItem.querySelector('.leaderboard-avatar-fallback');
+        const avatarUrl = player.character_image || player.photo_url || '';
+        if (avatarImg && avatarFb) {
+            if (avatarUrl) {
+                avatarFb.style.display = 'flex';
+                avatarImg.style.display = 'none';
+                avatarImg.onload = function () {
+                    avatarImg.style.display = 'block';
+                    avatarFb.style.display = 'none';
+                };
+                avatarImg.onerror = function () {
+                    avatarImg.style.display = 'none';
+                    avatarFb.style.display = 'flex';
+                };
+                avatarImg.src = avatarUrl;
+                if (avatarImg.complete && avatarImg.naturalWidth > 0) {
+                    avatarImg.style.display = 'block';
+                    avatarFb.style.display = 'none';
+                }
+            } else {
+                avatarImg.style.display = 'none';
+                avatarFb.style.display = 'flex';
+            }
+        }
+
         list.appendChild(playerItem);
     });
 }
@@ -1702,7 +1743,7 @@ function drawPriceChartForResource(priceHistory) {
     
     if (!priceHistory || priceHistory.length === 0) {
         ctx.fillStyle = '#3a2a1a';
-        ctx.font = '16px Arial';
+        ctx.font = "16px 'San Francisco', -apple-system, sans-serif";
         ctx.textAlign = 'center';
         ctx.fillText('Нет данных для графика', canvas.width / 2, canvas.height / 2);
         return;
@@ -1727,7 +1768,7 @@ function drawPriceChartForResource(priceHistory) {
         .map((r) => byRound.get(r));
     if (standardizedHistory.length === 0) {
         ctx.fillStyle = '#3a2a1a';
-        ctx.font = '16px Arial';
+        ctx.font = "16px 'San Francisco', -apple-system, sans-serif";
         ctx.textAlign = 'center';
         ctx.fillText('Нет данных для графика', canvas.width / 2, canvas.height / 2);
         return;
@@ -1771,7 +1812,7 @@ function drawPriceChartForResource(priceHistory) {
         ctx.stroke();
         
         ctx.fillStyle = '#3a2a1a';
-        ctx.font = '12px Arial';
+        ctx.font = "12px 'San Francisco', -apple-system, sans-serif";
         ctx.textAlign = 'right';
         ctx.fillText(Math.round(price).toString(), padding - 10, y + 4);
     }
@@ -1818,7 +1859,7 @@ function drawPriceChartForResource(priceHistory) {
             n <= 12 || index === 0 || index === n - 1 || index % labelStride === 0;
         if (showLabel) {
             ctx.fillStyle = '#3a2a1a';
-            ctx.font = '11px Arial';
+            ctx.font = "11px 'San Francisco', -apple-system, sans-serif";
             ctx.textAlign = 'center';
             ctx.fillText(String(point.round), x, canvas.height - padding + 20);
             ctx.fillStyle = '#006400';
@@ -1827,7 +1868,7 @@ function drawPriceChartForResource(priceHistory) {
     
     // Подписи осей
     ctx.fillStyle = '#3a2a1a';
-    ctx.font = '14px Arial';
+    ctx.font = "14px 'San Francisco', -apple-system, sans-serif";
     ctx.textAlign = 'center';
     ctx.fillText('Раунд', canvas.width / 2, canvas.height - 10);
     
