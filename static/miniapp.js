@@ -974,14 +974,11 @@ async function openMiniappRoundEventsModal() {
             return;
         }
 
-        const titleEl = document.getElementById('miniapp-round-events-modal-title');
         const imgWrap = document.getElementById('miniapp-round-events-modal-image-wrap');
         const imgEl = document.getElementById('miniapp-round-events-modal-image');
         const textEl = document.getElementById('miniapp-round-events-modal-text');
         const emptyEl = document.getElementById('miniapp-round-events-modal-empty');
         const rn = data.round_number != null ? data.round_number : currentRound;
-
-        if (titleEl) titleEl.textContent = 'События раунда ' + rn;
 
         const t = (data.event_text || '').trim();
         const u = (data.image_url || '').trim();
@@ -1589,8 +1586,25 @@ function fillMiniappPlayerModalCard(player, rankIndex) {
         pillGame.classList.toggle('negative', gg < 0);
     }
 
-    const photo = player.character_image;
-    if (photo && imgEl && fbEl) {
+    const heroEl = document.getElementById('miniapp-player-modal-hero');
+    const heroBlur = document.getElementById('miniapp-player-modal-hero-blur');
+
+    function setMiniappPlayerHeroBackdrop(hasPhoto, srcForBackdrop) {
+        if (!heroEl || !heroBlur) return;
+        if (hasPhoto && srcForBackdrop) {
+            heroEl.classList.remove('miniapp-player-modal-hero--no-photo');
+            const safe = String(srcForBackdrop).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+            heroBlur.style.backgroundImage = `url("${safe}")`;
+        } else {
+            heroEl.classList.add('miniapp-player-modal-hero--no-photo');
+            heroBlur.style.backgroundImage = '';
+        }
+    }
+
+    const photo = player.character_image || player.photo_url || '';
+    const photoTrimmed = typeof photo === 'string' ? photo.trim() : '';
+    if (photoTrimmed && imgEl && fbEl) {
+        setMiniappPlayerHeroBackdrop(true, photoTrimmed);
         imgEl.onload = () => {
             imgEl.style.display = 'block';
             fbEl.style.display = 'none';
@@ -1599,13 +1613,15 @@ function fillMiniappPlayerModalCard(player, rankIndex) {
             imgEl.style.display = 'none';
             fbEl.style.display = 'flex';
             fbEl.textContent = (name.charAt(0) || '?').toUpperCase();
+            setMiniappPlayerHeroBackdrop(false);
         };
-        imgEl.src = photo;
+        imgEl.src = photoTrimmed;
         if (imgEl.complete && imgEl.naturalWidth > 0) {
             imgEl.style.display = 'block';
             fbEl.style.display = 'none';
         }
     } else if (imgEl && fbEl) {
+        setMiniappPlayerHeroBackdrop(false);
         imgEl.removeAttribute('src');
         imgEl.style.display = 'none';
         fbEl.style.display = 'flex';

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Королевская Биржа</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <link rel="stylesheet" href="/static/miniapp.css?v=20260508roundeventsmodal1">
+    <link rel="stylesheet" href="/static/miniapp.css?v=20260509roundeventsnotitle">
 </head>
 <body>
     <div class="app-background" aria-hidden="true"></div>
@@ -642,11 +642,10 @@
     </div>
 
     <!-- События раунда (контент из админки: вкладка «События») -->
-    <div id="miniapp-round-events-modal" class="miniapp-round-events-modal" aria-hidden="true" role="dialog" aria-labelledby="miniapp-round-events-modal-title" aria-modal="true">
+    <div id="miniapp-round-events-modal" class="miniapp-round-events-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Событие раунда">
         <div class="miniapp-round-events-modal-backdrop" id="miniapp-round-events-modal-backdrop"></div>
         <div class="miniapp-round-events-modal-box">
             <button type="button" class="miniapp-round-events-modal-close" id="miniapp-round-events-modal-close" title="Закрыть" aria-label="Закрыть">&times;</button>
-            <h2 id="miniapp-round-events-modal-title" class="miniapp-round-events-modal-title">События раунда</h2>
             <div id="miniapp-round-events-modal-body" class="miniapp-round-events-modal-body">
                 <div id="miniapp-round-events-modal-image-wrap" class="miniapp-round-events-modal-image-wrap" style="display: none;">
                     <img id="miniapp-round-events-modal-image" src="" alt="" class="miniapp-round-events-modal-image">
@@ -671,15 +670,22 @@
         <div class="miniapp-player-modal-backdrop"></div>
         <div class="miniapp-player-modal-sheet">
             <button type="button" class="miniapp-player-modal-close" id="miniapp-player-modal-close" title="Закрыть">&times;</button>
-            <button type="button" class="miniapp-player-modal-nav miniapp-player-modal-nav-left" id="miniapp-player-modal-nav-left" title="Предыдущий игрок">‹</button>
-            <button type="button" class="miniapp-player-modal-nav miniapp-player-modal-nav-right" id="miniapp-player-modal-nav-right" title="Следующий игрок">›</button>
             <div class="miniapp-player-modal-body">
-                <div class="miniapp-player-modal-left">
-                    <div class="miniapp-player-modal-avatar-plaque-column">
-                        <div class="miniapp-player-modal-avatar-wrap">
-                            <img id="miniapp-player-modal-avatar" src="" alt="" class="miniapp-player-modal-avatar">
-                            <div id="miniapp-player-modal-avatar-fallback" class="miniapp-player-modal-avatar-fallback" style="display: none;"></div>
+                <!-- Верх: размытый фон из аватарки только до нижней кромки дощечки -->
+                <div class="miniapp-player-modal-hero miniapp-player-modal-hero--no-photo" id="miniapp-player-modal-hero">
+                    <div id="miniapp-player-modal-hero-blur" class="miniapp-player-modal-hero-blur" aria-hidden="true"></div>
+                    <div class="miniapp-player-modal-hero-scrim" aria-hidden="true"></div>
+                    <div class="miniapp-player-modal-hero-inner">
+                        <button type="button" class="miniapp-player-modal-nav miniapp-player-modal-nav-left" id="miniapp-player-modal-nav-left" title="Предыдущий игрок">‹</button>
+                        <div class="miniapp-player-modal-avatar-col-only">
+                            <div class="miniapp-player-modal-avatar-wrap">
+                                <img id="miniapp-player-modal-avatar" src="" alt="" class="miniapp-player-modal-avatar">
+                                <div id="miniapp-player-modal-avatar-fallback" class="miniapp-player-modal-avatar-fallback" style="display: none;"></div>
+                            </div>
                         </div>
+                        <button type="button" class="miniapp-player-modal-nav miniapp-player-modal-nav-right" id="miniapp-player-modal-nav-right" title="Следующий игрок">›</button>
+                    </div>
+                    <div class="miniapp-player-modal-plaque-row">
                         <div class="miniapp-player-modal-plaque">
                             <div class="miniapp-player-modal-plaque-img-wrap">
                                 <img class="miniapp-player-modal-plaque-img" src="/design/icons/Дощечка.png" alt="">
@@ -693,7 +699,8 @@
                         </div>
                     </div>
                 </div>
-                <div class="miniapp-player-modal-right">
+                <!-- Ниже имени — прежний ровный фон листа -->
+                <div class="miniapp-player-modal-details">
                     <h2 id="miniapp-player-modal-name" class="miniapp-player-modal-name"></h2>
                     <div class="miniapp-player-modal-pills-row">
                         <span class="miniapp-player-modal-pill miniapp-player-modal-pill-round" id="miniapp-player-modal-pill-round">0%</span>
@@ -712,7 +719,7 @@
         </div>
     </div>
 
-    <script src="/static/miniapp.js?v=20260508roundeventsmodal1"></script>
+    <script src="/static/miniapp.js?v=20260509roundeventsnotitle"></script>
 </body>
 </html>
 
