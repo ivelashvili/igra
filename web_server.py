@@ -1141,16 +1141,36 @@ async def get_buildings(request: Request, game_code: str = Query(..., descriptio
         
         result = []
         num_players = len(players)
+        current_prices = getattr(game, "current_prices", None) or {}
+        game_building_costs = getattr(game, "game_building_costs", None) or {}
+        enabled_buildings = list(getattr(game, "enabled_buildings", None) or list(BUILDING_COSTS.keys()))
         try:
-            for building_name, count in sorted(building_counts.items()):
+            for building_name in sorted(enabled_buildings):
                 try:
-                    players_count = players_with_building.get(building_name, 0)
-                    players_percentage = round((players_count / num_players) * 100) if num_players > 0 else 0
-                    
+                    count = int(building_counts.get(building_name, 0))
+                    players_count = int(players_with_building.get(building_name, 0))
+                    players_percentage = (
+                        round((players_count / num_players) * 100) if num_players > 0 else 0
+                    )
+
+                    costs = game_building_costs.get(building_name)
+                    if costs is None:
+                        costs = BUILDING_COSTS.get(building_name, {})
+                    cost_in_coins = 0.0
+                    for resource, amount in (costs or {}).items():
+                        try:
+                            price = float(
+                                current_prices.get(resource, RESOURCE_PRICES.get(resource, 0))
+                            )
+                            cost_in_coins += float(amount) * price
+                        except (TypeError, ValueError):
+                            continue
+
                     result.append({
                         "name": building_name,
                         "count": count,
-                        "players_percentage": players_percentage
+                        "players_percentage": players_percentage,
+                        "cost_coins": int(round(cost_in_coins)),
                     })
                 except Exception as e:
                     api_logger.warning(f"Ошибка обработки объекта {building_name} в get_buildings: {e}")
@@ -2699,11 +2719,18 @@ async def get_market_building_details(
     num_players = len(players)
     players_percentage = round((len(players_with_building) / num_players) * 100) if num_players > 0 else 0
     
-    # Получаем стоимость объекта в ресурсах
+    # Получаем стоимость объекта в ресурсах (как в GET /api/buildings)
     from game_config import BUILDING_COSTS, RESOURCE_PRICES
-    building_costs = BUILDING_COSTS.get(building_name, {})
-    cost_in_coins = sum(amount * game.current_prices.get(resource, RESOURCE_PRICES.get(resource, 0)) 
-                        for resource, amount in building_costs.items())
+    game_costs_map = getattr(game, "game_building_costs", None) or {}
+    building_costs = game_costs_map.get(building_name)
+    if building_costs is None:
+        building_costs = BUILDING_COSTS.get(building_name, {})
+    current_prices = getattr(game, "current_prices", None) or {}
+    cost_in_coins = sum(
+        float(amount)
+        * float(current_prices.get(resource, RESOURCE_PRICES.get(resource, 0)))
+        for resource, amount in (building_costs or {}).items()
+    )
     
     # Сколько таких объектов у игрока
     player_buildings = [b for b in player.buildings if b.name == building_name]

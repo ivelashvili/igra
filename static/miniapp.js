@@ -1599,28 +1599,42 @@ async function updateMarketBuildings() {
     const grid = document.getElementById('buildings-market-grid');
     if (!grid) return;
     
+    grid.innerHTML = '';
+    
+    // Все возможные объекты из конфига (Куртизанские палатки — последней)
+    const allBuildings = [
+        'Лесоповал', 'Каменоломня', 'Рыболовня', 'Трактир', 
+        'Теплицы', 'Посевные поля', 'Ферма', 'Постоялый двор',
+        'Кузнечная', 'Золотой рудник', 'Куртизанские палатки'
+    ];
+    
     try {
-        const response = await fetch(addGameCodeToUrl('/api/buildings'));
-        if (!response.ok) return;
+        // Берем оценку из того же API, что и внутри карточки объекта
+        const details = await Promise.all(allBuildings.map(async (buildingName) => {
+            try {
+                const response = await fetch(
+                    addGameCodeToUrl(`/api/miniapp/market/building/${encodeURIComponent(buildingName)}`),
+                    {
+                        headers: {
+                            'X-Telegram-Init-Data': getTelegramInitDataHeader()
+                        }
+                    }
+                );
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                const data = await response.json();
+                return {
+                    buildingName,
+                    costCoins: typeof data.cost_coins === 'number' ? data.cost_coins : 0
+                };
+            } catch (error) {
+                console.warn(`Не удалось получить оценку для ${buildingName}:`, error);
+                return { buildingName, costCoins: 0 };
+            }
+        }));
         
-        const data = await response.json();
-        const buildings = data.buildings || [];
-        
-        grid.innerHTML = '';
-        
-        // Все возможные объекты из конфига (Куртизанские палатки — последней)
-        const allBuildings = [
-            'Лесоповал', 'Каменоломня', 'Рыболовня', 'Трактир', 
-            'Теплицы', 'Посевные поля', 'Ферма', 'Постоялый двор',
-            'Кузнечная', 'Золотой рудник', 'Куртизанские палатки'
-        ];
-        
-        // Создаем карточки для всех объектов
-        allBuildings.forEach(buildingName => {
-            const buildingData = buildings.find(b => b.name === buildingName);
-            const count = buildingData ? buildingData.count : 0;
-            const playersPercentage = buildingData ? buildingData.players_percentage : 0;
-            
+        details.forEach(({ buildingName, costCoins }) => {
             const card = document.createElement('div');
             card.className = 'building-market-card';
             card.style.cursor = 'pointer';
@@ -1629,8 +1643,7 @@ async function updateMarketBuildings() {
                 <div class="building-market-name">${buildingName}</div>
                 <img src="${miniappMarketBuildingCardImageUrl(buildingName)}" alt="${buildingName}" class="building-market-image" onerror="this.style.display='none'">
                 <div class="building-market-stats">
-                    <span class="building-market-count">${count}</span>
-                    <span class="building-market-percentage">${playersPercentage}%</span>
+                    <span class="building-market-value">${costCoins.toLocaleString('ru-RU')}</span>
                 </div>
             `;
             grid.appendChild(card);

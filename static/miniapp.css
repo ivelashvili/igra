@@ -307,8 +307,16 @@ body {
     border-bottom: none;
 }
 
+.miniapp-sticky-app-top .miniapp-next-round-block {
+    margin-left: 16px;
+    margin-right: 16px;
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+
 /* Portfolio: header as card */
 .portfolio-header-card {
+    position: relative;
     border-radius: 12px;
     margin: 10px 16px 0 16px;
     padding: 12px 12px 12px 16px;
@@ -342,6 +350,7 @@ body {
 
 /* Portfolio: character card */
 .portfolio-character-card {
+    position: relative;
     border-radius: 12px;
     margin: 10px 16px;
     padding: 14px 16px;
@@ -444,12 +453,47 @@ body {
 
 /* Portfolio: card sections */
 .portfolio-card {
+    position: relative;
     border-radius: 12px;
     margin: 10px 0;
     padding: 14px 16px;
     background: linear-gradient(135deg, rgba(222, 184, 135, 0.25) 0%, rgba(205, 180, 150, 0.25) 100%);
     border: 1px solid rgba(139, 69, 19, 0.4);
     backdrop-filter: blur(8px);
+}
+
+/* Угловой декор карточек портфеля */
+.portfolio-corner {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    background-image: url('/design/icons/Элемент.png');
+    background-repeat: no-repeat;
+    background-size: contain;
+    background-position: center;
+    pointer-events: none;
+    z-index: 3;
+}
+.portfolio-corner-tl {
+    top: 6px;
+    left: 6px;
+}
+.portfolio-corner-tr {
+    top: 6px;
+    right: 6px;
+}
+.portfolio-corner-bl {
+    bottom: 6px;
+    left: 6px;
+}
+.portfolio-corner-br {
+    bottom: 6px;
+    right: 6px;
+}
+/* В карточках «мои ресурсы/объекты» верхние углы выровнены по строке заголовка */
+.portfolio-card .portfolio-corner-tl,
+.portfolio-card .portfolio-corner-tr {
+    top: 16px;
 }
 .portfolio-card-title {
     font-family: 'Stieglitz', serif;
@@ -831,14 +875,6 @@ body {
     justify-content: space-between;
     align-items: center;
     gap: 15px;
-}
-
-.building-row-first {
-    /* Первая строка: название слева, количество справа */
-}
-
-.building-row-second {
-    /* Вторая строка: статус слева, стоимость справа */
 }
 
 .building-left {
@@ -3601,6 +3637,7 @@ body {
 }
 #build-building-screen .build-building-buy-all-btn,
 #portfolio-screen .portfolio-round-events-block .build-building-buy-all-btn,
+.miniapp-sticky-app-top .miniapp-next-round-block .build-building-buy-all-btn,
 #rules-screen .build-building-buy-all-btn {
     width: 100%;
     padding: 0 20px;
@@ -3624,6 +3661,15 @@ body {
 #build-building-screen .build-building-buy-all-btn:hover,
 #portfolio-screen .portfolio-round-events-block .build-building-buy-all-btn:hover,
 #rules-screen .build-building-buy-all-btn:hover {
+    background: linear-gradient(135deg, rgba(222, 184, 135, 0.4) 0%, rgba(205, 180, 150, 0.4) 100%);
+}
+
+/* Контур золотой; фон как у «События раунда» (без Фон.png) */
+.miniapp-sticky-app-top .miniapp-next-round-block .miniapp-next-round-btn.build-building-buy-all-btn {
+    border: 2px solid #d4af37;
+    background: linear-gradient(135deg, rgba(222, 184, 135, 0.25) 0%, rgba(205, 180, 150, 0.25) 100%);
+}
+.miniapp-sticky-app-top .miniapp-next-round-block .miniapp-next-round-btn.build-building-buy-all-btn:hover {
     background: linear-gradient(135deg, rgba(222, 184, 135, 0.4) 0%, rgba(205, 180, 150, 0.4) 100%);
 }
 /* Кнопки правил — те же цвета, что «Назад» на карточке ресурса (#resource-screen .back-btn) */
@@ -4487,16 +4533,11 @@ body {
     background: linear-gradient(0deg, rgba(30, 18, 10, 0.82) 0%, rgba(30, 18, 10, 0.4) 65%, transparent 100%);
 }
 
-.building-market-count {
+.building-market-value {
+    font-family: 'San Francisco', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 1em;
     font-weight: bold;
     color: #cdac7f;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
-}
-
-.building-market-percentage {
-    font-size: 0.65em;
-    color: #e8d4a8;
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
 }
 

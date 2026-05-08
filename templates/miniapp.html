@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Королевская Биржа</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <link rel="stylesheet" href="/static/miniapp.css?v=20260508leaderboard2">
+    <link rel="stylesheet" href="/static/miniapp.css?v=20260508nextround4">
 </head>
 <body>
     <div class="app-background" aria-hidden="true"></div>
@@ -76,6 +76,10 @@
         <div class="miniapp-sticky-app-top">
             <!-- Header Card (Королевская биржа + Раунд) -->
             <header class="header portfolio-header-card">
+                <span class="portfolio-corner portfolio-corner-tl" aria-hidden="true"></span>
+                <span class="portfolio-corner portfolio-corner-tr" aria-hidden="true"></span>
+                <span class="portfolio-corner portfolio-corner-bl" aria-hidden="true"></span>
+                <span class="portfolio-corner portfolio-corner-br" aria-hidden="true"></span>
                 <div class="header-content">
                     <div class="logo-container">
                         <img src="/static/images/logo.png" alt="Логотип" class="logo header-crest">
@@ -91,6 +95,10 @@
 
             <!-- Character Card (Фото + Имя + капитализация) -->
             <div class="player-profile-block portfolio-character-card">
+                <span class="portfolio-corner portfolio-corner-tl" aria-hidden="true"></span>
+                <span class="portfolio-corner portfolio-corner-tr" aria-hidden="true"></span>
+                <span class="portfolio-corner portfolio-corner-bl" aria-hidden="true"></span>
+                <span class="portfolio-corner portfolio-corner-br" aria-hidden="true"></span>
                 <div class="player-avatar-section" id="player-avatar-click-area" role="button" tabindex="0" title="Открыть аватар">
                     <img id="player-avatar" src="" alt="Фото" class="player-avatar" style="display: none;">
                     <div id="player-avatar-placeholder" class="player-avatar-placeholder">Фото</div>
@@ -112,6 +120,10 @@
                     <span class="portfolio-balance-value" id="portfolio-balance-value">0</span>
                 </div>
             </div>
+
+            <div class="miniapp-next-round-block" role="region" aria-label="Следующий раунд">
+                <button type="button" class="build-building-buy-all-btn miniapp-next-round-btn" id="miniapp-next-round-btn">Следующий раунд</button>
+            </div>
         </div>
 
         <!-- Portfolio Screen (Main) -->
@@ -132,6 +144,8 @@
 
             <!-- Resources Card -->
             <section class="section portfolio-card">
+                <span class="portfolio-corner portfolio-corner-tl" aria-hidden="true"></span>
+                <span class="portfolio-corner portfolio-corner-tr" aria-hidden="true"></span>
                 <h2 class="portfolio-card-title">мои ресурсы</h2>
                 <div class="resources-list" id="resources-list">
                     <!-- Заполняется через JS -->
@@ -140,6 +154,8 @@
 
             <!-- Buildings Card -->
             <section class="section portfolio-card">
+                <span class="portfolio-corner portfolio-corner-tl" aria-hidden="true"></span>
+                <span class="portfolio-corner portfolio-corner-tr" aria-hidden="true"></span>
                 <h2 class="portfolio-card-title">мои объекты</h2>
                 <div class="buildings-list" id="buildings-list">
                     <!-- Заполняется через JS -->
@@ -666,7 +682,7 @@
         </div>
     </div>
 
-    <script src="/static/miniapp.js"></script>
+    <script src="/static/miniapp.js?v=20260508nextround2"></script>
 </body>
 </html>
 
