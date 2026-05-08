@@ -4975,3 +4975,217 @@ body {
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(139, 69, 19, 0.6);
 }
+
+/* Подтверждение «Следующий раунд» */
+.miniapp-next-round-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 10060;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+    box-sizing: border-box;
+    pointer-events: none;
+}
+
+.miniapp-next-round-modal.miniapp-next-round-modal--open {
+    display: flex;
+    pointer-events: auto;
+}
+
+.miniapp-next-round-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(20, 12, 8, 0.55);
+}
+
+.miniapp-next-round-modal-box {
+    position: relative;
+    width: 100%;
+    max-width: 320px;
+    padding: 22px 18px 18px;
+    box-sizing: border-box;
+    background: #cdac7f;
+    border: 2px solid #8b4513;
+    border-radius: 14px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+.miniapp-next-round-modal-title {
+    margin: 0 0 18px;
+    font-size: 0.95rem;
+    font-weight: bold;
+    color: #3a2a1a;
+    text-align: center;
+    line-height: 1.35;
+    font-family: inherit;
+}
+
+.miniapp-next-round-modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: stretch;
+}
+
+.miniapp-next-round-modal-btn {
+    flex: 1;
+    min-height: 42px;
+    padding: 0 14px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: bold;
+    font-family: inherit;
+    cursor: pointer;
+    border: 2px solid #8b4513;
+    transition: background 0.2s ease;
+}
+
+/* как у portfolio-growth-segment *.negative («печенька» отрицательной доходности) */
+.miniapp-next-round-modal-btn--no {
+    background: rgba(220, 53, 69, 0.2);
+    border-color: #3d1518;
+    color: #3d1518;
+    text-shadow: none;
+}
+
+.miniapp-next-round-modal-btn--no:hover {
+    background: rgba(220, 53, 69, 0.32);
+    border-color: #3d1518;
+    color: #2f1014;
+}
+
+/* как у portfolio-growth-segment *.positive («печенька» с положительной доходностью) */
+.miniapp-next-round-modal-btn--yes {
+    background: rgba(40, 167, 69, 0.3);
+    border-color: #0a3d0a;
+    color: #0a3d0a;
+    text-shadow: none;
+}
+
+.miniapp-next-round-modal-btn--yes:hover {
+    background: rgba(40, 167, 69, 0.42);
+    border-color: #0a3d0a;
+    color: #082f08;
+}
+
+.miniapp-next-round-modal-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+/* Модалка «События раунда» (текст + картинка из админки) */
+.miniapp-round-events-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 10070;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+    box-sizing: border-box;
+    pointer-events: none;
+}
+
+.miniapp-round-events-modal.miniapp-round-events-modal--open {
+    display: flex;
+    pointer-events: auto;
+}
+
+.miniapp-round-events-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(20, 12, 8, 0.55);
+}
+
+.miniapp-round-events-modal-box {
+    position: relative;
+    width: 100%;
+    max-width: 360px;
+    max-height: min(85vh, 640px);
+    padding: 18px 16px 16px;
+    box-sizing: border-box;
+    background: #cdac7f;
+    border: 2px solid #8b4513;
+    border-radius: 14px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.miniapp-round-events-modal-close {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    z-index: 2;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    margin: 0;
+    border: none;
+    border-radius: 10px;
+    background: rgba(139, 69, 19, 0.2);
+    color: #3a2a1a;
+    font-size: 1.75rem;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.miniapp-round-events-modal-close:hover {
+    background: rgba(139, 69, 19, 0.35);
+}
+
+.miniapp-round-events-modal-title {
+    margin: 0 44px 12px 0;
+    font-size: 0.95rem;
+    font-weight: bold;
+    color: #3a2a1a;
+    text-align: center;
+    line-height: 1.3;
+    font-family: inherit;
+    flex-shrink: 0;
+}
+
+.miniapp-round-events-modal-body {
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+    -webkit-overflow-scrolling: touch;
+}
+
+.miniapp-round-events-modal-image-wrap {
+    margin-bottom: 12px;
+    text-align: center;
+}
+
+.miniapp-round-events-modal-image {
+    max-width: 100%;
+    max-height: 220px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border-radius: 10px;
+    border: 1px solid rgba(139, 69, 19, 0.35);
+}
+
+.miniapp-round-events-modal-text {
+    font-size: 0.8rem;
+    line-height: 1.45;
+    color: #3a2a1a;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: inherit;
+}
+
+.miniapp-round-events-modal-empty {
+    font-size: 0.8rem;
+    line-height: 1.4;
+    color: #5c3d2e;
+    text-align: center;
+    padding: 8px 4px;
+    font-style: italic;
+}

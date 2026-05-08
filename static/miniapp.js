@@ -429,6 +429,42 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
+document.addEventListener('DOMContentLoaded', () => {
+    const nextRoundBtn = document.getElementById('miniapp-next-round-btn');
+    const modal = document.getElementById('miniapp-next-round-modal');
+    const backdrop = document.getElementById('miniapp-next-round-modal-backdrop');
+    const noBtn = document.getElementById('miniapp-next-round-modal-no');
+    const yesBtn = document.getElementById('miniapp-next-round-modal-yes');
+    if (nextRoundBtn) {
+        nextRoundBtn.addEventListener('click', () => openMiniappNextRoundConfirmModal());
+    }
+    if (noBtn) noBtn.addEventListener('click', () => closeMiniappNextRoundConfirmModal());
+    if (backdrop) backdrop.addEventListener('click', () => closeMiniappNextRoundConfirmModal());
+    if (yesBtn) yesBtn.addEventListener('click', () => closeMiniappNextRoundConfirmModal());
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape' || !modal) return;
+        if (modal.classList.contains('miniapp-next-round-modal--open')) {
+            closeMiniappNextRoundConfirmModal();
+        }
+    });
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const eventsBtn = document.getElementById('portfolio-round-events-btn');
+    const reModal = document.getElementById('miniapp-round-events-modal');
+    const reBackdrop = document.getElementById('miniapp-round-events-modal-backdrop');
+    const reClose = document.getElementById('miniapp-round-events-modal-close');
+    if (eventsBtn) eventsBtn.addEventListener('click', () => openMiniappRoundEventsModal());
+    if (reClose) reClose.addEventListener('click', () => closeMiniappRoundEventsModal());
+    if (reBackdrop) reBackdrop.addEventListener('click', () => closeMiniappRoundEventsModal());
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape' || !reModal) return;
+        if (reModal.classList.contains('miniapp-round-events-modal--open')) {
+            closeMiniappRoundEventsModal();
+        }
+    });
+});
+
 // Обработка Enter в поле ввода кода
 document.addEventListener('DOMContentLoaded', () => {
     const gameCodeInput = document.getElementById('game-code-input');
@@ -908,6 +944,84 @@ async function loadRoundInfo() {
     } catch (error) {
         console.error('Ошибка загрузки информации о раунде:', error);
     }
+}
+
+function openMiniappNextRoundConfirmModal() {
+    const modal = document.getElementById('miniapp-next-round-modal');
+    if (!modal) return;
+    modal.classList.add('miniapp-next-round-modal--open');
+    modal.setAttribute('aria-hidden', 'false');
+}
+
+function closeMiniappNextRoundConfirmModal() {
+    const modal = document.getElementById('miniapp-next-round-modal');
+    if (!modal) return;
+    modal.classList.remove('miniapp-next-round-modal--open');
+    modal.setAttribute('aria-hidden', 'true');
+}
+
+// Переключение раунда только на вебе; в миниапе кнопки модалки пока только закрывают окно (логику добавим позже).
+
+async function openMiniappRoundEventsModal() {
+    try {
+        const response = await fetch(addGameCodeToUrl('/api/miniapp/round-events-content'), {
+            cache: 'no-store',
+            headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' },
+        });
+        const data = response.ok ? await response.json() : null;
+        if (!data || data.success !== true) {
+            showToast('Не удалось загрузить событие раунда', 'error');
+            return;
+        }
+
+        const titleEl = document.getElementById('miniapp-round-events-modal-title');
+        const imgWrap = document.getElementById('miniapp-round-events-modal-image-wrap');
+        const imgEl = document.getElementById('miniapp-round-events-modal-image');
+        const textEl = document.getElementById('miniapp-round-events-modal-text');
+        const emptyEl = document.getElementById('miniapp-round-events-modal-empty');
+        const rn = data.round_number != null ? data.round_number : currentRound;
+
+        if (titleEl) titleEl.textContent = 'События раунда ' + rn;
+
+        const t = (data.event_text || '').trim();
+        const u = (data.image_url || '').trim();
+
+        if (textEl) {
+            textEl.textContent = t;
+            textEl.style.display = t ? 'block' : 'none';
+        }
+        if (emptyEl) emptyEl.style.display = !t && !u ? 'block' : 'none';
+
+        if (imgWrap && imgEl) {
+            if (u) {
+                imgWrap.style.display = 'block';
+                imgEl.alt = 'Событие раунда ' + rn;
+                imgEl.onerror = function () {
+                    imgWrap.style.display = 'none';
+                };
+                imgEl.src = u;
+            } else {
+                imgWrap.style.display = 'none';
+                imgEl.removeAttribute('src');
+            }
+        }
+
+        const modal = document.getElementById('miniapp-round-events-modal');
+        if (modal) {
+            modal.classList.add('miniapp-round-events-modal--open');
+            modal.setAttribute('aria-hidden', 'false');
+        }
+    } catch (err) {
+        console.error('openMiniappRoundEventsModal:', err);
+        showToast('Ошибка загрузки события', 'error');
+    }
+}
+
+function closeMiniappRoundEventsModal() {
+    const modal = document.getElementById('miniapp-round-events-modal');
+    if (!modal) return;
+    modal.classList.remove('miniapp-round-events-modal--open');
+    modal.setAttribute('aria-hidden', 'true');
 }
 
 // Обновление информации об игроке

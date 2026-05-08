@@ -2478,6 +2478,43 @@ async def get_round_info(
     response.headers["Pragma"] = "no-cache"
     return response
 
+
+@app.get("/api/miniapp/round-events-content")
+async def get_miniapp_round_events_content(
+    game_code: str = Query(..., description="Код игры (6 цифр)"),
+):
+    """Текст и картинка события для текущего раунда (админка → вкладка «События»)."""
+    game = await get_game_by_code(game_code, allow_archived=True)
+    cr = getattr(game, "current_round", None) or 1
+    try:
+        cr_int = int(cr)
+    except (TypeError, ValueError):
+        cr_int = 1
+    if cr_int < 1:
+        cr_int = 1
+    if cr_int > 10:
+        cr_int = 10
+
+    rows = await database.list_round_events_admin(game.game_id, cr_int)
+    event_text = ""
+    image_url = ""
+    if rows:
+        event_text = (rows[0].get("event_text") or "").strip()
+        image_url = (rows[0].get("image_url") or "").strip()
+
+    from fastapi.responses import JSONResponse
+    response = JSONResponse(
+        content={
+            "success": True,
+            "round_number": cr_int,
+            "event_text": event_text,
+            "image_url": image_url,
+        }
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
 @app.get("/api/miniapp/buildings")
 async def get_available_buildings(
     game_code: str = Query(..., description="Код игры (6 цифр)"),

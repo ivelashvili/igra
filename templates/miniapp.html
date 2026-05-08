@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Королевская Биржа</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <link rel="stylesheet" href="/static/miniapp.css?v=20260508resourcecardimg1">
+    <link rel="stylesheet" href="/static/miniapp.css?v=20260508roundeventsmodal1">
 </head>
 <body>
     <div class="app-background" aria-hidden="true"></div>
@@ -629,6 +629,34 @@
     <!-- Toast Notifications -->
     <div id="toast" class="toast"></div>
 
+    <!-- Подтверждение перехода к следующему раунду -->
+    <div id="miniapp-next-round-modal" class="miniapp-next-round-modal" aria-hidden="true" role="dialog" aria-labelledby="miniapp-next-round-modal-title" aria-modal="true">
+        <div class="miniapp-next-round-modal-backdrop" id="miniapp-next-round-modal-backdrop"></div>
+        <div class="miniapp-next-round-modal-box">
+            <h2 id="miniapp-next-round-modal-title" class="miniapp-next-round-modal-title">Вы готовы переходить к следующему раунду?</h2>
+            <div class="miniapp-next-round-modal-actions">
+                <button type="button" class="miniapp-next-round-modal-btn miniapp-next-round-modal-btn--no" id="miniapp-next-round-modal-no">Нет</button>
+                <button type="button" class="miniapp-next-round-modal-btn miniapp-next-round-modal-btn--yes" id="miniapp-next-round-modal-yes">Да</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- События раунда (контент из админки: вкладка «События») -->
+    <div id="miniapp-round-events-modal" class="miniapp-round-events-modal" aria-hidden="true" role="dialog" aria-labelledby="miniapp-round-events-modal-title" aria-modal="true">
+        <div class="miniapp-round-events-modal-backdrop" id="miniapp-round-events-modal-backdrop"></div>
+        <div class="miniapp-round-events-modal-box">
+            <button type="button" class="miniapp-round-events-modal-close" id="miniapp-round-events-modal-close" title="Закрыть" aria-label="Закрыть">&times;</button>
+            <h2 id="miniapp-round-events-modal-title" class="miniapp-round-events-modal-title">События раунда</h2>
+            <div id="miniapp-round-events-modal-body" class="miniapp-round-events-modal-body">
+                <div id="miniapp-round-events-modal-image-wrap" class="miniapp-round-events-modal-image-wrap" style="display: none;">
+                    <img id="miniapp-round-events-modal-image" src="" alt="" class="miniapp-round-events-modal-image">
+                </div>
+                <div id="miniapp-round-events-modal-text" class="miniapp-round-events-modal-text" style="display: none;"></div>
+                <div id="miniapp-round-events-modal-empty" class="miniapp-round-events-modal-empty" style="display: none;">Для этого раунда событие в админке не заполнено.</div>
+            </div>
+        </div>
+    </div>
+
     <!-- Модальное окно просмотра аватара -->
     <div id="avatar-view-modal" class="avatar-view-modal" aria-hidden="true">
         <button type="button" class="avatar-view-close" id="avatar-view-close" title="Закрыть">&times;</button>
@@ -684,7 +712,7 @@
         </div>
     </div>
 
-    <script src="/static/miniapp.js?v=20260508resourcecardimg1"></script>
+    <script src="/static/miniapp.js?v=20260508roundeventsmodal1"></script>
 </body>
 </html>
 
