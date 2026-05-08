@@ -16,6 +16,8 @@ import database
 
 # Служебный ключ в games.config_data: опорные % игроков для тренда на проекторе (переживает рестарт сервера)
 PROJECTOR_PCT_BASELINES_CONFIG_KEY = "_projector_building_pct_baselines"
+# Капитализация игроков (total_value как в get_leaderboard) на входе в раунд R — один снимок сразу после переключения current_round на R
+PLAYER_CAPITALIZATION_BY_ROUND_ENTRY_KEY = "_player_capitalization_round_entry_snapshots"
 
 
 class BuildingStatus(Enum):
@@ -159,6 +161,7 @@ class Game:
         # % игроков с хотя бы одним объектом типа (округлённо), на границах раундов — для тренда на проекторе
         self.building_players_pct_prev_round_start: Dict[str, int] = {}
         self.building_players_pct_current_round_start: Dict[str, int] = {}
+        self.player_capitalization_by_round_entry: Dict[int, Dict[str, float]] = {}
     
     async def initialize(self):
         """Асинхронная инициализация игры (загрузка/сохранение в БД)"""
@@ -185,6 +188,7 @@ class Game:
             self.building_players_pct_current_round_start = Game.compute_building_players_pct_by_name(self.players)
             await self._persist_building_pct_baselines_to_config()
         
+        await self.ensure_player_round_entry_capitalization_baseline_async()
         self._initialized = True
     
     async def load_game_config(self):
@@ -1245,10 +1249,133 @@ class Game:
         self.building_players_pct_current_round_start = new_start
         await self._persist_building_pct_baselines_to_config()
         
+        # Снимок капитализации на вход в новый текущий раунд (после current_round += 1)
+        self.capture_player_capitalization_at_round_entry(int(self.current_round))
+        await self.persist_player_round_entry_capitalization_snapshots_async()
+        
         # Сохраняем полное состояние в БД
         await self.save_to_database()
         
         return round_result
+    
+    def leaderboard_player_totals_by_id(self) -> Dict[str, float]:
+        """total_value каждого игрока как в get_leaderboard (ключ — str(player_id))."""
+        return {
+            str(row["player_id"]): float(row["total_value"])
+            for row in self.get_leaderboard()
+        }
+    
+    def capture_player_capitalization_at_round_entry(self, round_no: int) -> None:
+        """Зафиксировать капитализацию игроков на входе в раунд ``round_no``."""
+        try:
+            r = int(round_no)
+        except (TypeError, ValueError):
+            return
+        if not self.players:
+            self.player_capitalization_by_round_entry.pop(r, None)
+            return
+        self.player_capitalization_by_round_entry[r] = self.leaderboard_player_totals_by_id()
+    
+    @staticmethod
+    def parse_round_entry_snapshots_from_config(fragment: Any) -> Dict[int, Dict[str, float]]:
+        """Разобрать JSON из games.config_data в словарь {раунд: {player_id: total}}."""
+        if not fragment or not isinstance(fragment, dict):
+            return {}
+        out: Dict[int, Dict[str, float]] = {}
+        for rk, raw_map in fragment.items():
+            try:
+                r = int(rk)
+            except (TypeError, ValueError):
+                continue
+            if not isinstance(raw_map, dict):
+                continue
+            inner: Dict[str, float] = {}
+            for pk, val in raw_map.items():
+                try:
+                    inner[str(pk)] = float(val)
+                except (TypeError, ValueError):
+                    continue
+            if inner:
+                out[r] = inner
+        return out
+    
+    def trim_player_capitalization_round_snapshots_above(self, max_round: int) -> None:
+        """Удалить снимки раундов строго больше ``max_round`` (откат)."""
+        try:
+            mx = int(max_round)
+        except (TypeError, ValueError):
+            return
+        self.player_capitalization_by_round_entry = {
+            r: d
+            for r, d in self.player_capitalization_by_round_entry.items()
+            if r <= mx
+        }
+    
+    async def hydrate_player_round_entry_cap_from_db(self) -> None:
+        """Загрузить снимки из games.config_data."""
+        try:
+            cfg = await database.get_game_config(self.game_id)
+        except Exception:
+            cfg = None
+        frag = cfg.get(PLAYER_CAPITALIZATION_BY_ROUND_ENTRY_KEY) if isinstance(cfg, dict) else {}
+        self.player_capitalization_by_round_entry = Game.parse_round_entry_snapshots_from_config(frag)
+    
+    async def persist_player_round_entry_capitalization_snapshots_async(self) -> None:
+        """Сохранить снимки в games.config_data (слияние)."""
+        try:
+            cfg = await database.get_game_config(self.game_id)
+        except Exception:
+            cfg = None
+        merged: Dict[str, Any] = dict(cfg) if isinstance(cfg, dict) else {}
+        serial: Dict[str, Dict[str, float]] = {}
+        for r, pmap in sorted(self.player_capitalization_by_round_entry.items()):
+            serial[str(r)] = {str(k): float(v) for k, v in pmap.items()}
+        merged[PLAYER_CAPITALIZATION_BY_ROUND_ENTRY_KEY] = serial
+        await database.save_game_config(self.game_id, merged)
+    
+    async def ensure_player_round_entry_capitalization_baseline_async(self) -> None:
+        """Загрузить снимки, подрезать под текущий раунд; при отсутствии снимка — записать текущее."""
+        await self.hydrate_player_round_entry_cap_from_db()
+        r = int(getattr(self, "current_round", 1) or 1)
+        self.trim_player_capitalization_round_snapshots_above(r)
+        if self.players and r not in self.player_capitalization_by_round_entry:
+            self.capture_player_capitalization_at_round_entry(r)
+            await self.persist_player_round_entry_capitalization_snapshots_async()
+    
+    def player_growth_round_percent(self, player_id: str, current_total_value: float) -> float:
+        """
+        Доходность за последнее переключение раунда: снимок(текущий раунд) / снимок(прошлый) - 1.
+        Снимок текущего раунда задаётся на входе после process_round (при желании можно подставить live total).
+        """
+        try:
+            R = int(self.current_round)
+        except (TypeError, ValueError):
+            return 0.0
+        if R < 2:
+            return 0.0
+        pid = str(player_id)
+        by_r = self.player_capitalization_by_round_entry
+        cur_map = by_r.get(R) or {}
+        prev_map = by_r.get(R - 1) or {}
+        cap_prev = prev_map.get(pid)
+        if cap_prev is None or cap_prev <= 0:
+            return 0.0
+        cap_cur = cur_map.get(pid)
+        if cap_cur is None:
+            cap_cur = float(current_total_value)
+        return round(((cap_cur / cap_prev) - 1.0) * 100.0, 2)
+    
+    def player_growth_game_percent(self, player_id: str, current_total_value: float) -> float:
+        """Прирост относительно снимка на входе в раунд 1 (если есть)."""
+        pid = str(player_id)
+        first_map = self.player_capitalization_by_round_entry.get(1) or {}
+        first = first_map.get(pid)
+        if first is None or first <= 0:
+            return 0.0
+        try:
+            return round(((float(current_total_value) / first) - 1.0) * 100.0, 2)
+        except Exception:
+            return 0.0
     
     def create_snapshot(self) -> Dict:
         """Создать снимок текущего состояния игры"""
