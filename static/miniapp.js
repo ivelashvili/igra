@@ -1269,6 +1269,10 @@ function updateLeaderboard(leaderboard) {
             .replace(/>/g, '&gt;');
     }
 
+    function escAttr(s) {
+        return esc(s).replace(/"/g, '&quot;');
+    }
+
     const list = document.getElementById('leaderboard-list');
     list.innerHTML = '';
     miniappLeaderboardCache = Array.isArray(leaderboard) ? leaderboard.slice() : [];
@@ -1309,6 +1313,23 @@ function updateLeaderboard(leaderboard) {
         const growthRoundClass = growthRound >= 0 ? 'positive' : 'negative';
         const growthGameClass = growthGame >= 0 ? 'positive' : 'negative';
 
+        const portfolio = player.buildings_portfolio || [];
+        const seenBuildingNames = new Set();
+        const buildingIconParts = [];
+        for (let bi = 0; bi < portfolio.length; bi++) {
+            const row = portfolio[bi];
+            const bname = row && row.name;
+            if (!bname || seenBuildingNames.has(bname)) continue;
+            seenBuildingNames.add(bname);
+            const iconSrc = miniappBuildingIconUrlForName(bname);
+            buildingIconParts.push(
+                `<img class="leaderboard-building-icon" src="${iconSrc}" alt="" title="${escAttr(bname)}" loading="lazy" onerror="this.style.display='none'" />`
+            );
+        }
+        const buildingIconsHtml = buildingIconParts.length
+            ? `<div class="leaderboard-building-icons">${buildingIconParts.join('')}</div>`
+            : '<div class="leaderboard-building-icons leaderboard-building-icons--empty" aria-hidden="true"></div>';
+
         playerItem.innerHTML = `
             <div class="leaderboard-avatar-cell" aria-hidden="true">
                 <img class="leaderboard-avatar" alt="" />
@@ -1320,13 +1341,16 @@ function updateLeaderboard(leaderboard) {
                     <div class="leaderboard-arrow-slot">${arrowHtml}</div>
                 </div>
                 <div class="leaderboard-capitalization">${Math.round(player.total_value || 0).toLocaleString('ru-RU')}</div>
-                <div class="leaderboard-growth">
-                    <div class="leaderboard-growth-box ${growthRoundClass}">
-                        <div class="leaderboard-growth-value">${Math.round(growthRound)}%</div>
+                <div class="leaderboard-growth-row">
+                    <div class="leaderboard-growth">
+                        <div class="leaderboard-growth-box ${growthRoundClass}">
+                            <div class="leaderboard-growth-value">${Math.round(growthRound)}%</div>
+                        </div>
+                        <div class="leaderboard-growth-box ${growthGameClass}">
+                            <div class="leaderboard-growth-value">${Math.round(growthGame)}%</div>
+                        </div>
                     </div>
-                    <div class="leaderboard-growth-box ${growthGameClass}">
-                        <div class="leaderboard-growth-value">${Math.round(growthGame)}%</div>
-                    </div>
+                    ${buildingIconsHtml}
                 </div>
             </div>
             <div class="leaderboard-rank-side">
@@ -1493,23 +1517,73 @@ function fillMiniappPlayerModalCard(player, rankIndex) {
             listEl.appendChild(li);
         }
     }
+
+    const resourcesListEl = document.getElementById('miniapp-player-modal-resources');
+    if (resourcesListEl) {
+        resourcesListEl.innerHTML = '';
+        const rp = player.resources_portfolio || [];
+        if (rp.length > 0) {
+            rp.forEach((row) => {
+                const rname = row && row.name;
+                if (!rname) return;
+                const amount = typeof row.amount === 'number' ? row.amount : parseFloat(row.amount) || 0;
+                const li = document.createElement('li');
+                const icon = document.createElement('img');
+                icon.className = 'miniapp-player-modal-building-icon';
+                icon.alt = '';
+                icon.src = miniappResourceIconUrl(rname);
+                icon.onerror = () => { icon.style.visibility = 'hidden'; };
+                const label = document.createElement('span');
+                label.className = 'miniapp-player-modal-building-name';
+                label.textContent = capitalizeFirst(rname);
+                const amtEl = document.createElement('span');
+                amtEl.className = 'miniapp-player-modal-resource-amount';
+                amtEl.textContent = Math.round(amount).toLocaleString('ru-RU');
+                li.appendChild(icon);
+                li.appendChild(label);
+                li.appendChild(amtEl);
+                resourcesListEl.appendChild(li);
+            });
+        } else {
+            const li = document.createElement('li');
+            li.className = 'miniapp-player-modal-buildings-empty';
+            li.textContent = 'Нет ресурсов';
+            resourcesListEl.appendChild(li);
+        }
+    }
+}
+
+function miniappPlayerModalRowNeedsLeaderboardRefresh(row) {
+    if (!row) return true;
+    if (!Object.prototype.hasOwnProperty.call(row, 'buildings_portfolio')) return true;
+    if (!Object.prototype.hasOwnProperty.call(row, 'resources_portfolio')) return true;
+    const rp = row.resources_portfolio;
+    if (Array.isArray(rp) && rp.length > 0) return false;
+    const rv = row.resources_value != null ? Number(row.resources_value) : NaN;
+    return Number.isFinite(rv) && rv > 0;
 }
 
 function fillMiniappPlayerModalFromIndex(index) {
     const base = miniappLeaderboardCache[index];
     if (!base) return;
-    if (Object.prototype.hasOwnProperty.call(base, 'buildings_portfolio')) {
+    if (!miniappPlayerModalRowNeedsLeaderboardRefresh(base) &&
+        Object.prototype.hasOwnProperty.call(base, 'buildings_portfolio')) {
         fillMiniappPlayerModalCard(base, index);
         return;
     }
     fillMiniappPlayerModalCard(base, index);
-    fetch(addGameCodeToUrl('/api/leaderboard'))
+    fetch(addGameCodeToUrl('/api/miniapp/leaderboard'))
         .then(function (res) { return res.json(); })
         .then(function (data) {
             const lb = data && data.leaderboard;
             if (lb && lb.length) {
-                const row = lb.find(function (p) { return p.player_id === base.player_id; });
-                if (row) miniappLeaderboardCache[index] = row;
+                const pid = base.player_id;
+                const row = lb.find(function (p) {
+                    return String(p.player_id) === String(pid);
+                });
+                if (row) {
+                    miniappLeaderboardCache[index] = Object.assign({}, base, row);
+                }
             }
             fillMiniappPlayerModalCard(miniappLeaderboardCache[index], index);
         })

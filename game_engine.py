@@ -525,8 +525,11 @@ class Game:
     
     def get_player(self, player_id: str) -> Optional[Player]:
         """Получить игрока по ID"""
+        sid = str(player_id) if player_id is not None else None
+        if sid is None:
+            return None
         for player in self.players:
-            if player.id == player_id:
+            if str(player.id) == sid:
                 return player
         return None
     
