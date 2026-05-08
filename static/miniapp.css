@@ -2076,6 +2076,8 @@ body {
     max-height: 264px;
     width: auto;
     height: auto;
+    object-fit: contain;
+    border-radius: 12px;
 }
 
 .resource-screen-stats {

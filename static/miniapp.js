@@ -1147,6 +1147,18 @@ function miniappResourceIconUrl(resourceKey) {
     return miniappDesignIconsUrl(resourceIconName);
 }
 
+/** Большое изображение на карточке ресурса: design/картинки ресурсов/<имя как у ресурса>.png */
+function miniappResourceCardImageUrl(resourceKey, filenameVariant) {
+    if (resourceKey == null || resourceKey === '') return '';
+    const dir = 'картинки ресурсов';
+    let stem = filenameVariant != null && filenameVariant !== ''
+        ? String(filenameVariant).trim()
+        : String(resourceKey).trim().toLowerCase();
+    stem = stem.replace(/\.png$/i, '');
+    const file = stem + '.png';
+    return '/design/' + encodeURIComponent(dir) + '/' + encodeURIComponent(file);
+}
+
 // Пути иконок меню (design/icons): активная и неактивная версия для каждого раздела
 const NAV_ICONS = {
     portfolio: { active: miniappDesignIconsUrl('Портфель.png'), inactive: miniappDesignIconsUrl('Портфель(1).png') },
@@ -1754,15 +1766,26 @@ async function showResourceScreen(resourceName) {
         // Заполняем данные на странице
         document.getElementById('resource-screen-name').textContent = capitalizeFirst(resourceName);
         
-        // Картинка
-        const imagePath = miniappResourceIconUrl(resourceName);
+        // Картинка (папка design/картинки ресурсов; имя файла как у ресурса; иначе — иконка)
         const imageEl = document.getElementById('resource-screen-image');
-        imageEl.src = imagePath;
+        const rn = String(resourceName).trim();
+        const rnLower = rn.toLowerCase();
+        const altFileBase = capitalizeFirst(rnLower);
+        let phase = 0;
         imageEl.alt = capitalizeFirst(resourceName);
         imageEl.style.display = 'block';
-        imageEl.onerror = function() {
-            this.style.display = 'none';
+        imageEl.onerror = function () {
+            phase += 1;
+            if (phase === 1) {
+                this.src = miniappResourceCardImageUrl(resourceName, altFileBase);
+            } else if (phase === 2) {
+                this.src = miniappResourceIconUrl(resourceName);
+                this.onerror = function () {
+                    this.style.display = 'none';
+                };
+            }
         };
+        imageEl.src = miniappResourceCardImageUrl(resourceName, rnLower);
         
         // Цена
         document.getElementById('resource-screen-price').textContent = `${data.current_price.toLocaleString('ru-RU')}`;
